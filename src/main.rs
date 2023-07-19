@@ -12,7 +12,7 @@ use bevy_mod_fbx::FbxPlugin;
 use bevy_mod_picking::prelude::*;
 use bevy_scene_hook::*;
 
-use sandbox::*;
+use tilebound::*;
 
 use bevy_mod_picking::{self, PickableBundle};
 
