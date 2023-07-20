@@ -70,10 +70,11 @@ pub struct Enemy {
     pub attack_range: i32,
     pub movement_range: i32,
     pub damage: f32,
+    pub health: Health,
 }
 
 impl Enemy {
-    pub fn new(q: i32, r: i32, attack_range: i32, movement_range: i32, damage: f32) -> Enemy {
+    pub fn new(q: i32, r: i32, attack_range: i32, movement_range: i32, damage: f32, hp: f32) -> Enemy {
         Enemy {
             hex_coord: HexCoord::new(q, r),
             path: None,
@@ -81,6 +82,7 @@ impl Enemy {
             attack_range,
             movement_range,
             damage,
+            health: Health::new(hp),
         }
     }
 }
@@ -128,6 +130,7 @@ pub fn update_tile_pos(
     mut tiles: Query<(&mut Transform, &mut Tile), (With<Tile>, Without<Player>, Without<PlayerAction>)>,
     mut combat_manager_query: Query<&mut CombatManager>,
     mut spell_casts_query: Query<(&mut Transform, &PlayerAction), With<PlayerAction>>,
+    mut enemies: Query<&mut Enemy>,
 ) {
     let mut combat_manager = combat_manager_query.single_mut();
     for (mut tile_transform, mut tile_struct) in &mut tiles {
@@ -142,6 +145,19 @@ pub fn update_tile_pos(
                         if tile_struct.is_clicked {
                             combat_manager.reset_buttons = true;
                             tile_struct.is_clicked = false;
+                            match player_action {
+                                PlayerAction::Movement => {}
+                                PlayerAction::SpellCast(spell) => match spell {
+                                    SpellType::Fireball => {
+                                        for mut enemy in &mut enemies {
+                                            if enemy.hex_coord == tile_struct.coord {
+                                                enemy.health.hp -= 5.0
+                                            }
+                                        }
+                                    }
+                                    _ => {}
+                                },
+                            }
                         }
                     }
                 }
@@ -171,12 +187,12 @@ pub fn update_player_pos(
     }
     let mut data = data.unwrap();
 
-    let mut clicked_tiles: Vec<(i32, i32)> = Vec::new();
+    let mut clicked_tiles: Vec<HexCoord> = Vec::new();
     let mut player_qr = data.hex_coord.clone();
     let mut end_tile: HexCoord = data.hex_coord.clone();
     for (_, tile_struct) in &mut tiles {
         if tile_struct.is_clicked {
-            end_tile = HexCoord::new_from_tupple(tile_struct.coord);
+            end_tile = tile_struct.coord;
             clicked_tiles.push(tile_struct.coord)
         }
     }
@@ -293,5 +309,20 @@ pub fn enemy_ai(
                 }
             }
         }
+    }
+}
+
+pub fn update_enemy_health(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    query: Query<(Entity, &Enemy)>,
+) {
+    for (entity, enemy) in query.iter() {
+        let health_percentage = enemy.health.hp / enemy.health.max_hp;
+        let new_material: Handle<StandardMaterial> =
+            materials.add(Color::rgba(1.0, 0.0, 0.0, health_percentage).into());
+
+        // Replace the old material with the new one
+        commands.entity(entity).insert(new_material);
     }
 }

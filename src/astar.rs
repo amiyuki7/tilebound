@@ -3,7 +3,7 @@ use crate::*;
 #[derive(Reflect, Component, Default)]
 #[reflect(Component)]
 pub struct Tile {
-    pub coord: (i32, i32),
+    pub coord: HexCoord,
     pub is_obstructed: bool,
     pub pathfinding_start: bool,
     pub pathfinding_end: bool,
@@ -14,7 +14,7 @@ pub struct Tile {
 impl Tile {
     pub fn new(q: i32, r: i32, is_obstructed: bool) -> Tile {
         Tile {
-            coord: (q, r),
+            coord: HexCoord::new(q, r),
             is_obstructed,
             pathfinding_start: false,
             pathfinding_end: false,
@@ -25,7 +25,7 @@ impl Tile {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Reflect, Default)]
 pub struct HexCoord {
     pub q: i32,
     pub r: i32,

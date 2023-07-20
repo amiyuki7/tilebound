@@ -62,6 +62,7 @@ fn main() {
                 button_reset_system.before(button_system),
                 enemy_ai,
                 update_health_bar,
+                update_enemy_health,
             )
                 .after(spawn_scene)
                 .in_set(OnUpdate(GameState::InGame)),
@@ -214,7 +215,7 @@ fn spawn_scene(
             ),
             ..default()
         },
-        Enemy::new(6, 3, 3, 2, 10.0),
+        Enemy::new(6, 3, 3, 2, 10.0, 20.0),
     ));
 
     // !Player
