@@ -52,8 +52,11 @@ pub fn button_reset_system(
         }
         debug_text.sections[0].value = "resetting buttons".to_string();
         combat_manager.reset_buttons = false;
+        if combat_manager.player_action != Some(PlayerAction::Movement) {
+            combat_manager.turn = Turn::Enemies;
+        }
         combat_manager.player_action = None;
-        combat_manager.turn = Turn::Enemies;
+
         for (mut color, children, mut toggle_state) in &mut interaction_query {
             let mut text = text_query.get_mut(children[0]).unwrap();
             let other_text = other_text_query.get(children[0]).unwrap();

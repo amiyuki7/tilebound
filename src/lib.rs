@@ -265,49 +265,53 @@ pub fn enemy_ai(
     let mut combat_manager = combat_manager_query.single_mut();
     if combat_manager.turn == Turn::Enemies {
         // combat_manager.turn = Turn::Player;
-        for (mut enemy_pos, mut enemy_data) in &mut enemies {
-            if enemy_data.path.is_none() {
-                let sample_obstructed = vec![HexCoord::new(10, 10)];
-                let e_path = astar(enemy_data.hex_coord, player.hex_coord, &sample_obstructed);
-                if let Some(e_some_path) = &mut e_path.clone() {
-                    e_some_path.remove(0);
-                    while e_some_path.len() > enemy_data.movement_range as usize {
-                        e_some_path.remove(e_some_path.len() - 1);
-                        // debug_text.sections[0].value = format!("{:#?}", e_some_path.len()).to_string();
-                    }
-                    // println!("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n{:#?} \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", e_some_path);
-                    // e_some_path = *e_some_path[1..enemy_data.movement_range as usize].to_vec();
-                    enemy_data.path = Some(e_some_path.clone());
-                }
-            }
-            if let Some(e_some_path) = &mut enemy_data.path.clone() {
-                enemy_data.move_timer.tick(time.delta());
-                if enemy_data.move_timer.just_finished() {
-                    if hex_distance(&enemy_data.hex_coord, &player.hex_coord) > enemy_data.attack_range {
-                        enemy_data.hex_coord = e_some_path[0];
-                        // debug_text.sections[0].value =
-                        // format!("{:#?} {:#?}", e_some_path[0].q, e_some_path[0].r).to_string();
-                        if !e_some_path.is_empty() {
-                            enemy_pos.translation.x = e_some_path[0].q as f32 * HORIZONTAL_SPACING
-                                + e_some_path[0].r as f32 % 2.0 * HOR_OFFSET;
-                            enemy_pos.translation.z = e_some_path[0].r as f32 * VERTICAL_SPACING;
-                        };
+        if !enemies.is_empty() {
+            for (mut enemy_pos, mut enemy_data) in &mut enemies {
+                if enemy_data.path.is_none() {
+                    let sample_obstructed = vec![HexCoord::new(10, 10)];
+                    let e_path = astar(enemy_data.hex_coord, player.hex_coord, &sample_obstructed);
+                    if let Some(e_some_path) = &mut e_path.clone() {
                         e_some_path.remove(0);
+                        while e_some_path.len() > enemy_data.movement_range as usize {
+                            e_some_path.remove(e_some_path.len() - 1);
+                            // debug_text.sections[0].value = format!("{:#?}", e_some_path.len()).to_string();
+                        }
+                        // println!("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n{:#?} \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", e_some_path);
+                        // e_some_path = *e_some_path[1..enemy_data.movement_range as usize].to_vec();
                         enemy_data.path = Some(e_some_path.clone());
                     }
-                    debug_text.sections[0].value =
-                        format!("{}", hex_distance(&enemy_data.hex_coord, &player.hex_coord).to_string());
-                    if hex_distance(&enemy_data.hex_coord, &player.hex_coord) <= enemy_data.attack_range {
-                        player_health.hp -= enemy_data.damage;
+                }
+                if let Some(e_some_path) = &mut enemy_data.path.clone() {
+                    enemy_data.move_timer.tick(time.delta());
+                    if enemy_data.move_timer.just_finished() {
+                        if hex_distance(&enemy_data.hex_coord, &player.hex_coord) > enemy_data.attack_range {
+                            enemy_data.hex_coord = e_some_path[0];
+                            // debug_text.sections[0].value =
+                            // format!("{:#?} {:#?}", e_some_path[0].q, e_some_path[0].r).to_string();
+                            if !e_some_path.is_empty() {
+                                enemy_pos.translation.x = e_some_path[0].q as f32 * HORIZONTAL_SPACING
+                                    + e_some_path[0].r as f32 % 2.0 * HOR_OFFSET;
+                                enemy_pos.translation.z = e_some_path[0].r as f32 * VERTICAL_SPACING;
+                            };
+                            e_some_path.remove(0);
+                            enemy_data.path = Some(e_some_path.clone());
+                        }
+                        debug_text.sections[0].value =
+                            format!("{}", hex_distance(&enemy_data.hex_coord, &player.hex_coord).to_string());
+                        if hex_distance(&enemy_data.hex_coord, &player.hex_coord) <= enemy_data.attack_range {
+                            player_health.hp -= enemy_data.damage;
+                            combat_manager.turn = Turn::Player;
+                            enemy_data.path = None;
+                        }
+                    }
+                    if e_some_path.len() == 0 {
                         combat_manager.turn = Turn::Player;
                         enemy_data.path = None;
                     }
                 }
-                if e_some_path.len() == 0 {
-                    combat_manager.turn = Turn::Player;
-                    enemy_data.path = None;
-                }
             }
+        } else {
+            combat_manager.turn = Turn::Player
         }
     }
 }
@@ -318,6 +322,10 @@ pub fn update_enemy_health(
     query: Query<(Entity, &Enemy)>,
 ) {
     for (entity, enemy) in query.iter() {
+        if enemy.health.hp <= 0.0 {
+            commands.entity(entity).despawn();
+            continue;
+        }
         let health_percentage = enemy.health.hp / enemy.health.max_hp;
         let new_material: Handle<StandardMaterial> =
             materials.add(Color::rgba(1.0, 0.0, 0.0, health_percentage).into());
