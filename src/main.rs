@@ -17,6 +17,7 @@ use tilebound::*;
 use bevy_mod_picking::{self, PickableBundle};
 
 use bevy_inspector_egui::bevy_egui;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 fn main() {
     App::new()
@@ -43,14 +44,14 @@ fn main() {
         .add_plugins(DefaultPickingPlugins.build().disable::<DefaultHighlightingPlugin>())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        // .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(WorldInspectorPlugin::new())
         // .add_plugin(EditorPlugin::default())
         .insert_resource(ClearColor(Color::ALICE_BLUE))
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 0.2,
         })
-        .add_plugin(bevy_egui::EguiPlugin)
+        // .add_plugin(bevy_egui::EguiPlugin)
         .add_plugin(LoadingPlugin)
         .add_plugin(AnimEnginePlugin)
         .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
@@ -156,46 +157,45 @@ fn spawn_scene(
             is_obstructed = true;
         }
 
-        commands
-            .spawn((
-                PbrBundle {
-                    mesh: meshes.add(Mesh::from(shape::RegularPolygon {
-                        radius: 5.2 * SCALE,
-                        sides: 6,
-                    })),
-                    material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.6).into()),
-                    transform: Transform::from_scale(Vec3::splat(SCALE))
-                        .with_translation(Vec3::new(
-                            HORIZONTAL_SPACING * x as f32 + z as f32 % 2.0 * HOR_OFFSET,
-                            1.0,
-                            VERTICAL_SPACING * z as f32,
-                        ))
-                        .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
-                    ..Default::default()
-                },
-                Tile::new(coord.q, coord.r, is_obstructed),
-                PickableBundle::default(),
-                RaycastPickTarget::default(),
-                OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
-                OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
-                OnPointer::<Click>::target_component_mut::<Tile>(|_, tile| {
-                    if tile.can_be_clicked {
-                        if tile.is_clicked {
-                            tile.is_clicked = false
-                        } else {
-                            tile.is_clicked = true
-                        }
+        commands.spawn((
+            PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::RegularPolygon {
+                    radius: 5.2 * SCALE,
+                    sides: 6,
+                })),
+                material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.6).into()),
+                transform: Transform::from_scale(Vec3::splat(SCALE))
+                    .with_translation(Vec3::new(
+                        HORIZONTAL_SPACING * x as f32 + z as f32 % 2.0 * HOR_OFFSET,
+                        1.0,
+                        VERTICAL_SPACING * z as f32,
+                    ))
+                    .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
+                ..Default::default()
+            },
+            Tile::new(coord.q, coord.r, is_obstructed),
+            PickableBundle::default(),
+            RaycastPickTarget::default(),
+            OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
+            OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
+            OnPointer::<Click>::target_component_mut::<Tile>(|_, tile| {
+                if tile.can_be_clicked {
+                    if tile.is_clicked {
+                        tile.is_clicked = false
+                    } else {
+                        tile.is_clicked = true
                     }
-                }),
-            ))
-            .with_children(|parent| {
-                parent.spawn(SceneBundle {
-                    scene: asset_server.load("tile.glb#Scene0"),
-                    transform: Transform::from_translation(Vec3::new(0.0, 0.0, -0.15))
-                        .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
-                    ..default()
-                });
-            });
+                }
+            }),
+        ));
+        // .with_children(|parent| {
+        //     parent.spawn(SceneBundle {
+        //         scene: asset_server.load("tile.glb#Scene0"),
+        //         transform: Transform::from_translation(Vec3::new(0.0, 0.0, -0.15))
+        //             .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
+        //         ..default()
+        //     });
+        // });
     }
 
     // !Enemies
