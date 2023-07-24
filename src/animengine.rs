@@ -38,6 +38,7 @@ pub struct SpawnEntityEvent {
 #[derive(Component)]
 pub struct PlayerEntity;
 
+/// A Rigged Entity
 #[derive(Component, Reflect, Debug)]
 pub struct RiggedEntity {
     is_player: bool,
@@ -54,7 +55,7 @@ impl RiggedEntity {
     }
 }
 
-/// Used to identify corresponding [`AnimationPlayer`] and [`RiggedEntity`](sandbox::RiggedEntity) components
+/// Used to identify corresponding [`AnimationPlayer`] and [`RiggedEntity`] components
 #[derive(Component, Reflect)]
 pub struct HashMarker(pub u64);
 
