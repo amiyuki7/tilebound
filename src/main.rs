@@ -17,6 +17,7 @@ use tilebound::*;
 use bevy_mod_picking::{self, PickableBundle};
 
 use bevy_inspector_egui::bevy_egui;
+use tilebound::map_load::MapContext;
 
 fn main() {
     App::new()
@@ -67,6 +68,8 @@ fn main() {
                 .after(spawn_scene)
                 .in_set(OnUpdate(GameState::InGame)),
         )
+        .insert_resource(MapContext::from_map("1"))
+        // .insert_resource(MapContext {})
         .run();
 }
 
@@ -126,76 +129,46 @@ fn spawn_scene(
     });
 
     // !Tiles
-    let mut tile_coords: Vec<HexCoord> = Vec::new();
-
-    for q in 0..10 {
-        for r in 0..8 {
-            tile_coords.push(HexCoord::new(q, r))
-        }
-    }
-
-    let start = HexCoord::new(0, 0);
-    let goal = HexCoord::new(3, 2);
-    let obstructed_tiles: Vec<HexCoord> = vec![HexCoord { q: 10, r: 10 }];
-
-    let mut path: Vec<(i32, i32)> = Vec::new();
-
-    match astar(start, goal, &obstructed_tiles) {
-        Some(path_found) => {
-            for coord in path_found {
-                path.push((coord.q, coord.r));
-            }
-        }
-        None => println!("No path found."),
-    }
-    for coord in tile_coords {
-        let x = coord.q;
-        let z = coord.r;
-        let mut is_obstructed = false;
-        if obstructed_tiles.contains(&HexCoord::new(x, z)) {
-            is_obstructed = true;
-        }
-
-        commands
-            .spawn((
-                PbrBundle {
-                    mesh: meshes.add(Mesh::from(shape::RegularPolygon {
-                        radius: 5.2 * SCALE,
-                        sides: 6,
-                    })),
-                    material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.6).into()),
-                    transform: Transform::from_scale(Vec3::splat(SCALE))
-                        .with_translation(Vec3::new(
-                            HORIZONTAL_SPACING * x as f32 + z as f32 % 2.0 * HOR_OFFSET,
-                            1.0,
-                            VERTICAL_SPACING * z as f32,
-                        ))
-                        .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
-                    ..Default::default()
-                },
-                Tile::new(coord.q, coord.r, is_obstructed),
-                PickableBundle::default(),
-                RaycastPickTarget::default(),
-                OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
-                OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
-                OnPointer::<Click>::target_component_mut::<Tile>(|_, tile| {
-                    if tile.can_be_clicked {
-                        if tile.is_clicked {
-                            tile.is_clicked = false
-                        } else {
-                            tile.is_clicked = true
-                        }
+    for tile in load_new_map_data("1") {
+        commands.spawn((
+            PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::RegularPolygon {
+                    radius: 5.2 * SCALE,
+                    sides: 6,
+                })),
+                material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.6).into()),
+                transform: Transform::from_scale(Vec3::splat(SCALE))
+                    .with_translation(Vec3::new(
+                        HORIZONTAL_SPACING * tile.coord.q as f32 + tile.coord.r as f32 % 2.0 * HOR_OFFSET,
+                        1.0,
+                        VERTICAL_SPACING * tile.coord.r as f32,
+                    ))
+                    .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
+                ..Default::default()
+            },
+            tile,
+            PickableBundle::default(),
+            RaycastPickTarget::default(),
+            OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
+            OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
+            OnPointer::<Click>::target_component_mut::<Tile>(|_, tile| {
+                if tile.can_be_clicked {
+                    if tile.is_clicked {
+                        tile.is_clicked = false
+                    } else {
+                        tile.is_clicked = true
                     }
-                }),
-            ))
-            .with_children(|parent| {
-                parent.spawn(SceneBundle {
-                    scene: asset_server.load("tile.glb#Scene0"),
-                    transform: Transform::from_translation(Vec3::new(0.0, 0.0, -0.15))
-                        .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
-                    ..default()
-                });
-            });
+                }
+            }),
+        ));
+        // .with_children(|parent| {
+        //     parent.spawn(SceneBundle {
+        //         scene: asset_server.load("tile.glb#Scene0"),
+        //         transform: Transform::from_translation(Vec3::new(0.0, 0.0, -0.15))
+        //             .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
+        //         ..default()
+        //     });
+        // });
     }
 
     // !Enemies

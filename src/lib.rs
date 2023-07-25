@@ -7,11 +7,13 @@ use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 pub mod animengine;
 pub mod astar;
 pub mod load;
+pub mod map_load;
 pub mod tempui;
 
 pub use animengine::*;
 pub use astar::*;
 pub use load::*;
+pub use map_load::*;
 pub use tempui::*;
 
 #[derive(States, PartialEq, Eq, Debug, Clone, Hash, Default)]

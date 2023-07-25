@@ -1,12 +1,11 @@
 use crate::*;
+use serde::Deserialize;
 
-#[derive(Reflect, Component, Default)]
+#[derive(Reflect, Component, Default, Deserialize)]
 #[reflect(Component)]
 pub struct Tile {
     pub coord: HexCoord,
     pub is_obstructed: bool,
-    pub pathfinding_start: bool,
-    pub pathfinding_end: bool,
     pub is_hovered: bool,
     pub is_clicked: bool,
     pub can_be_clicked: bool,
@@ -16,8 +15,6 @@ impl Tile {
         Tile {
             coord: HexCoord::new(q, r),
             is_obstructed,
-            pathfinding_start: false,
-            pathfinding_end: false,
             is_hovered: false,
             is_clicked: false,
             can_be_clicked: false,
@@ -25,7 +22,7 @@ impl Tile {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Reflect, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Reflect, Default, Deserialize)]
 pub struct HexCoord {
     pub q: i32,
     pub r: i32,
