@@ -5,7 +5,8 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(draw_menu_ui.in_schedule(OnEnter(GameState::Menu)))
-            .add_system(play_button_interaction.in_set(OnUpdate(GameState::Menu)));
+            .add_system(play_button_interaction.in_set(OnUpdate(GameState::Menu)))
+            .add_system(cleanup_menu.in_schedule(OnExit(GameState::Menu)));
     }
 }
 
@@ -78,13 +79,22 @@ fn play_button_interaction(
     for (interaction, mut background_color) in &mut interaction_query {
         match interaction {
             Interaction::Clicked => {
-                //
                 next_game_state.set(GameState::VisibleLoading);
             }
             Interaction::Hovered => *background_color = Color::rgb(0.0, 1.0, 0.0).into(),
             Interaction::None => *background_color = Color::rgb(0.0, 0.8, 0.2).into(),
         }
     }
+}
+
+/// Despawns all entities spawned as part of the menu screen. Runs on the exit of [`GameState::Menu`]
+fn cleanup_menu(
+    mut commands: Commands,
+    camera_query: Query<Entity, With<MenuCameraMarker>>,
+    uiroot_query: Query<Entity, With<MenuUIRootMarker>>,
+) {
+    commands.entity(camera_query.get_single().unwrap()).despawn_recursive();
+    commands.entity(uiroot_query.get_single().unwrap()).despawn_recursive();
 }
 
 pub const NORMAL_BUTTON: Color = Color::rgba(0.15, 0.15, 0.15, 0.85);
