@@ -17,6 +17,7 @@ use tilebound::*;
 use bevy_mod_picking::{self, PickableBundle};
 
 use bevy_inspector_egui::bevy_egui;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use tilebound::map_load::MapContext;
 
 fn main() {
@@ -44,15 +45,16 @@ fn main() {
         .add_plugins(DefaultPickingPlugins.build().disable::<DefaultHighlightingPlugin>())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        // .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(WorldInspectorPlugin::new())
         // .add_plugin(EditorPlugin::default())
         .insert_resource(ClearColor(Color::ALICE_BLUE))
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 0.2,
         })
-        .add_plugin(bevy_egui::EguiPlugin)
+        // .add_plugin(bevy_egui::EguiPlugin)
         .add_plugin(LoadingPlugin)
+        .add_plugin(MenuPlugin)
         .add_plugin(AnimEnginePlugin)
         .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
         .add_systems(

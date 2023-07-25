@@ -1,5 +1,20 @@
 use crate::*;
 
+/// Plugin responsible for correctly loading all assets into Resources
+///
+/// Public Resources:
+/// - [`REntityMap`]
+///
+/// ## State is GameState::Loading
+/// 1. [`asset_loading`] (runs ONCE)
+/// 2. [`check_assets_ready`]
+///     - Done? -> Goto 3
+///     - No?   -> repeats itself
+///
+/// ## State is GameState::LoadingPhaseTwo
+/// 3. [`loading_phase_two`]
+///     - Done? -> State is [`GameState::InGame`]
+///     - No?   -> repeats itself
 pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
@@ -34,18 +49,21 @@ impl AnimationMeta {
 }
 
 pub struct REntityMeta {
+    /// The rigged model
     pub scene: Handle<Scene>,
-    /// \ 0 => Equip
-    /// \ 1 => Disarm
-    /// \ 2 => Idle Armed
-    /// \ 3 => Idle Unarmed
-    /// \ 4 => Attack
-    /// \ 5 => Skill A
-    /// \ 6 => Skill B
-    /// \ 7 => Death
-    /// \ 8 => Move
-    /// \ 9 => Run
-    /// 10 => Interact
+    /// | index | animation    |
+    /// | ----- | ------------ |
+    /// | 0     | equip        |
+    /// | 1     | disarm       |
+    /// | 2     | idle armed   |
+    /// | 3     | idle unarmed |
+    /// | 4     | attack       |
+    /// | 5     | skill A      |
+    /// | 6     | skill B      |
+    /// | 7     | death        |
+    /// | 8     | move (walk)  |
+    /// | 9     | run          |
+    /// | 10    | interact     |
     pub animations: Vec<AnimationMeta>,
     pub weapon_scene: Handle<Scene>,
     pub weapon_transform: Transform,
@@ -57,12 +75,29 @@ pub enum REntityType {
 }
 
 #[derive(Resource)]
+/// Provides raw access to assets associated with entities with a valid [`REntityType`].
+///
+/// Often only library code should really be accessing this Resource. For example, there's a system
+/// [`spawn_rigged_entity`] which is managed by the [`SpawnEntityEvent`] event which handles
+/// spawning rigged entities.
+///
+/// # Examples
+///
+/// ```
+/// fn my_system(re_map: Res<REntityMap>) {
+///     let kraug_meta = re_map.0.get(&REntityType::Kraug).unwrap();
+///     let kraug_axe = kraug_meta.weapon_scene.clone_weak();
+/// }
+/// ```
 pub struct REntityMap(pub HashMap<REntityType, REntityMeta>);
 
 #[derive(Component)]
+/// During [`GameState::Loading`], we use a [`Camera2d`] with a Red [`ClearColor`] to visually
+/// debug that GameStates are being switched properly
 struct LoadingCameraMarker;
 
-/// Loads primary asset data into the [`REntityMap`](tilebound::load::REntityMap) resource.
+/// Executes asset loading jobs including:
+/// - loading asset data into the [`REntityMap`] resource
 fn asset_loading(mut commands: Commands, asset_server: Res<AssetServer>, mut loading: ResMut<LoadingAssets>) {
     commands
         .spawn(Camera2dBundle::default())
@@ -104,8 +139,9 @@ fn asset_loading(mut commands: Commands, asset_server: Res<AssetServer>, mut loa
     commands.insert_resource(REntityMap(r_entity_map));
 }
 
-/// Assets may take time to load. Utilises [`LoadingAssets`](tilebound::load::LoadingAssets) to track progress of loaded
-/// assets. Manages [`GameState`](tilebound::GameState).
+/// Assets may take time to load.
+/// Utilises [`LoadingAssets`] to track progress of loaded assets.
+/// Manages [`GameState`].
 fn check_assets_ready(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -132,8 +168,10 @@ fn check_assets_ready(
     }
 }
 
-/// Other loading priorities including - associating animations with correct duration metadata. Manages
-/// [`GameState`](tilebound::GameState)
+/// Executes other non-asset loading jobs including:
+/// - associating animations with correct duration metadata
+///
+/// Manages [`GameState`].
 fn loading_phase_two(
     animations: Res<Assets<AnimationClip>>,
     mut re_map: ResMut<REntityMap>,
@@ -157,6 +195,7 @@ fn loading_phase_two(
         .iter()
         .all(|(_, rmeta)| rmeta.animations.iter().all(|anim| anim.duration != 0.0))
     {
-        next_game_state.set(GameState::InGame)
+        // next_game_state.set(GameState::InGame);
+        next_game_state.set(GameState::Menu);
     }
 }
