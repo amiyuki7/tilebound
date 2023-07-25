@@ -53,6 +53,7 @@ fn main() {
         })
         // .add_plugin(bevy_egui::EguiPlugin)
         .add_plugin(LoadingPlugin)
+        .add_plugin(MenuPlugin)
         .add_plugin(AnimEnginePlugin)
         .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
         .add_systems(

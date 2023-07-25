@@ -1,5 +1,92 @@
 use crate::*;
 
+pub struct MenuPlugin;
+
+impl Plugin for MenuPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system(draw_menu_ui.in_schedule(OnEnter(GameState::Menu)))
+            .add_system(play_button_interaction.in_set(OnUpdate(GameState::Menu)));
+    }
+}
+
+#[derive(Component)]
+struct MenuCameraMarker;
+
+#[derive(Component)]
+struct MenuUIRootMarker;
+
+#[derive(Component)]
+struct PlayButtonMarker;
+
+fn draw_menu_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn((Camera2dBundle::default(), Name::new("menu_camera"), MenuCameraMarker));
+
+    commands
+        // Container
+        .spawn(NodeBundle {
+            style: Style {
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            background_color: Color::rgb(0.1, 0.1, 0.1).into(),
+            ..default()
+        })
+        .insert(Name::new("menu ui root"))
+        .insert(MenuUIRootMarker)
+        .with_children(|parent| {
+            parent
+                // Button
+                .spawn(ButtonBundle {
+                    style: Style {
+                        size: Size::new(Val::Percent(20.0), Val::Percent(10.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    background_color: Color::rgb(0.0, 0.6, 0.1).into(),
+                    // Always set FocusPolicy::Block on buttons otherwise you get occasional displacement bugs
+                    focus_policy: bevy::ui::FocusPolicy::Block,
+                    ..default()
+                })
+                .insert(Name::new("play button"))
+                .insert(PlayButtonMarker)
+                .with_children(|parent| {
+                    parent
+                        // Text
+                        .spawn(TextBundle {
+                            text: Text::from_section(
+                                "Play!",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: 40.0,
+                                    color: Color::WHITE,
+                                },
+                            ),
+                            ..default()
+                        });
+                });
+        });
+}
+
+#[allow(clippy::type_complexity)]
+fn play_button_interaction(
+    mut interaction_query: Query<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<PlayButtonMarker>)>,
+    mut next_game_state: ResMut<NextState<GameState>>,
+) {
+    for (interaction, mut background_color) in &mut interaction_query {
+        match interaction {
+            Interaction::Clicked => {
+                //
+                next_game_state.set(GameState::VisibleLoading);
+            }
+            Interaction::Hovered => *background_color = Color::rgb(0.0, 1.0, 0.0).into(),
+            Interaction::None => *background_color = Color::rgb(0.0, 0.8, 0.2).into(),
+        }
+    }
+}
+
 pub const NORMAL_BUTTON: Color = Color::rgba(0.15, 0.15, 0.15, 0.85);
 pub const HOVERED_BUTTON: Color = Color::rgba(0.25, 0.25, 0.25, 0.95);
 pub const PRESSED_BUTTON: Color = Color::rgba(0.35, 0.75, 0.35, 1.0);
