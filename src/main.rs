@@ -17,7 +17,7 @@ use tilebound::*;
 use bevy_mod_picking::{self, PickableBundle};
 
 use bevy_inspector_egui::bevy_egui;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_inspector_egui::quick::{StateInspectorPlugin, WorldInspectorPlugin};
 use tilebound::map_load::MapContext;
 
 fn main() {
@@ -56,7 +56,7 @@ fn main() {
         .add_plugin(LoadingPlugin)
         .add_plugin(MenuPlugin)
         .add_plugin(AnimEnginePlugin)
-        .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
+        .add_plugin(StateInspectorPlugin::<GameState>::default())
         .add_systems(
             (
                 update_tile_pos.before(button_reset_system),
@@ -74,10 +74,6 @@ fn main() {
         // .insert_resource(MapContext {})
         .run();
 }
-
-// Marker
-#[derive(Component)]
-struct GameCamera;
 
 fn spawn_scene(
     mut commands: Commands,

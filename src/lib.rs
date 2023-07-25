@@ -16,7 +16,7 @@ pub use load::*;
 pub use map_load::*;
 pub use tempui::*;
 
-#[derive(States, PartialEq, Eq, Debug, Clone, Hash, Default)]
+#[derive(States, Reflect, PartialEq, Eq, Debug, Clone, Hash, Default)]
 pub enum GameState {
     #[default]
     /// Load assets
