@@ -1,6 +1,11 @@
 use crate::*;
 
-/// Plugin responsible for correctly loading all assets into Resources
+pub mod visibleload;
+pub use visibleload::*;
+
+/// Plugin responsible for:
+/// - Loading all assets into Resources
+/// - Loading all entities into the game during [`GameState::VisibleLoading`], before [`GameState::InGame`]
 ///
 /// Public Resources:
 /// - [`REntityMap`]
@@ -13,8 +18,19 @@ use crate::*;
 ///
 /// ## State is GameState::LoadingPhaseTwo
 /// 3. [`loading_phase_two`]
-///     - Done? -> State is [`GameState::InGame`]
+///     - Done? -> State is [`GameState::Menu`]
 ///     - No?   -> repeats itself
+///
+/// Then, the player clicks "Play" in the menu...
+///
+/// ### State is GameState::VisibleLoading
+/// 4. [`setup_scene`]
+/// 5. [`scene_is_setup`]
+///     - Yes?  -> Goto 6
+///     - No?   -> repeats itself
+///
+/// ## State is GameState::InGame
+/// 6. All game systems start working!
 pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
@@ -28,7 +44,10 @@ impl Plugin for LoadingPlugin {
                     .after(asset_loading)
                     .in_set(OnUpdate(GameState::Loading)),
             )
-            .add_system((loading_phase_two).in_set(OnUpdate(GameState::LoadingPhaseTwo)));
+            .add_system(loading_phase_two.in_set(OnUpdate(GameState::LoadingPhaseTwo)))
+            // After GameState::Menu
+            .add_system(setup_scene.in_schedule(OnEnter(GameState::VisibleLoading)))
+            .add_system(scene_is_setup.in_set(OnUpdate(GameState::VisibleLoading)));
     }
 }
 
