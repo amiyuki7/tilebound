@@ -1,6 +1,9 @@
+use bevy_mod_picking::prelude::RaycastPickCamera;
+
 use crate::*;
 
 use std::collections::hash_map::DefaultHasher;
+use std::f32::consts::PI;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
@@ -11,6 +14,7 @@ impl Plugin for AnimEnginePlugin {
         app.register_type::<HashMarker>()
             .register_type::<RiggedEntity>()
             .add_event::<SpawnEntityEvent>()
+            .add_system(spawn_rigged_entity.in_set(OnUpdate(GameState::VisibleLoading)))
             .add_systems(
                 (spawn_rigged_entity, background_animation, key_animation_mock).in_set(OnUpdate(GameState::InGame)),
             );
@@ -34,9 +38,6 @@ pub struct SpawnEntityEvent {
     pub entity_type: REntityType,
     pub is_player: bool,
 }
-
-#[derive(Component)]
-pub struct PlayerEntity;
 
 /// A Rigged Entity
 #[derive(Component, Reflect, Debug)]
@@ -111,14 +112,31 @@ pub fn spawn_rigged_entity(
         };
 
         if event.is_player {
+            // Attach a camera to the player
+            let camera = commands
+                .spawn((
+                    Camera3dBundle {
+                        transform: Transform::from_xyz(0.0, 5.0, -8.0)
+                            // Increase x rotation a bit -> more "birds eye"
+                            // Decrease x rotation a bit -> more "look at the sky"
+                            .with_rotation(Quat::from_rotation_x(PI * 13.0 / 12.0) * Quat::from_rotation_z(PI)),
+                        ..default()
+                    },
+                    RaycastPickCamera::default(),
+                ))
+                .insert(PlayerCameraMarker)
+                .id();
+
             commands
                 .entity(spawned_entity)
-                // .insert(PlayerEntity)
-                // TODO: Deprecate this soon
-                .insert(Player::new(0, 0));
+                .insert(Player::new(0, 0))
+                .add_child(camera);
         }
     }
 }
+
+#[derive(Component)]
+pub struct PlayerCameraMarker;
 
 pub fn background_animation(
     re_map: Res<REntityMap>,
