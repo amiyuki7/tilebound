@@ -7,6 +7,8 @@ use std::f32::consts::PI;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
+use bevy_panorbit_camera::*;
+
 pub struct AnimEnginePlugin;
 
 impl Plugin for AnimEnginePlugin {
@@ -14,7 +16,9 @@ impl Plugin for AnimEnginePlugin {
         app.register_type::<HashMarker>()
             .register_type::<RiggedEntity>()
             .add_event::<SpawnEntityEvent>()
+            .add_plugin(PanOrbitCameraPlugin)
             .add_system(spawn_rigged_entity.in_set(OnUpdate(GameState::VisibleLoading)))
+            .add_systems((background_animation, key_animation_mock).in_set(OnUpdate(GameState::VisibleLoading)))
             .add_systems(
                 (spawn_rigged_entity, background_animation, key_animation_mock).in_set(OnUpdate(GameState::InGame)),
             );
@@ -116,10 +120,22 @@ pub fn spawn_rigged_entity(
             let camera = commands
                 .spawn((
                     Camera3dBundle {
-                        transform: Transform::from_xyz(0.0, 5.0, -8.0)
+                        // transform: Transform::from_xyz(0.0, 5.0, -8.0)
+                        transform: Transform::from_xyz(0.0, 25.0, -20.0)
                             // Increase x rotation a bit -> more "birds eye"
                             // Decrease x rotation a bit -> more "look at the sky"
-                            .with_rotation(Quat::from_rotation_x(PI * 13.0 / 12.0) * Quat::from_rotation_z(PI)),
+                            .with_rotation(
+                                /*Quat::from_rotation_x(PI * 13.0 / 12.0)*/
+                                Quat::from_rotation_x(4.0) * Quat::from_rotation_z(PI),
+                            ),
+                        ..default()
+                    },
+                    PanOrbitCamera {
+                        // Disable orbit
+                        orbit_sensitivity: 0.0,
+                        button_pan: MouseButton::Right,
+                        zoom_lower_limit: Some(3.0),
+                        zoom_upper_limit: Some(50.0),
                         ..default()
                     },
                     RaycastPickCamera::default(),
@@ -171,7 +187,7 @@ pub fn background_animation(
                 &re_map.0.get(re_type).unwrap().animations[rentity.current_animation.as_ref().unwrap().index];
 
             let anim_elapsed = anim_player.elapsed();
-            trace!("Elapsed {} / {}", anim_elapsed, target_anim.duration);
+            // trace!("Elapsed {} / {}", anim_elapsed, target_anim.duration);
 
             // Linear blend all but index 8 and 9 (move/run)
             // Move [8] or Run [9] should be "looping" (re-pending itself) unless explicitly overriden
