@@ -74,7 +74,7 @@ fn main() {
                 .in_set(OnUpdate(GameState::InGame)),
         )
         .insert_resource(MapContext::from_map("1".to_string()))
-        // .insert_resource(MapContext {})
+        .insert_resource(CombatManager::new())
         .run();
 }
 
@@ -344,9 +344,6 @@ fn spawn_scene(
         });
 
     commands.insert_resource(health);
-
-    // !Combat Manager
-    commands.spawn(CombatManager::new());
 }
 
 #[derive(Component)]

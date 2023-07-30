@@ -97,7 +97,7 @@ pub enum PlayerAction {
     SpellCast(SpellType),
 }
 
-#[derive(Component, PartialEq)]
+#[derive(Resource, PartialEq)]
 pub struct CombatManager {
     pub turn: Turn,
     pub player_action: Option<PlayerAction>,
@@ -132,11 +132,10 @@ pub const HOR_OFFSET: f32 = 2.6 * SCALE;
 
 pub fn update_tile_pos(
     mut tiles: Query<(&mut Transform, &mut Tile), (With<Tile>, Without<Player>, Without<PlayerAction>)>,
-    mut combat_manager_query: Query<&mut CombatManager>,
+    mut combat_manager: ResMut<CombatManager>,
     mut spell_casts_query: Query<(&mut Transform, &PlayerAction), With<PlayerAction>>,
     mut enemies: Query<&mut Enemy>,
 ) {
-    let mut combat_manager = combat_manager_query.single_mut();
     for (mut tile_transform, mut tile_struct) in &mut tiles {
         tile_transform.translation.y = 1.0;
         if tile_struct.is_hovered {
@@ -178,12 +177,11 @@ pub fn update_player_pos(
     mut player_data: Query<&mut Player, With<Player>>,
     mut player_transform: Query<&mut Transform, With<Player>>,
     time: Res<Time>,
-    mut combat_manager_query: Query<&mut CombatManager>,
+    mut combat_manager: ResMut<CombatManager>,
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
     mut map_context: ResMut<MapContext>,
 ) {
     let mut debug_text = debug_text_query.single_mut();
-    let mut combat_manager = combat_manager_query.single_mut();
 
     // TEMP WORKAROUND DEPRECATE LATER
     let mut data = player_data.get_single_mut();
@@ -264,7 +262,7 @@ pub fn enemy_ai(
     // mut tiles: Query<(&mut Transform, &mut Tile), With<Tile>>,
     mut enemies: Query<(&mut Transform, &mut Enemy)>,
     player_query: Query<&Player>,
-    mut combat_manager_query: Query<&mut CombatManager>,
+    mut combat_manager: ResMut<CombatManager>,
     time: Res<Time>,
     mut player_health: ResMut<Health>,
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
@@ -278,7 +276,6 @@ pub fn enemy_ai(
     }
     let player = player.unwrap();
 
-    let mut combat_manager = combat_manager_query.single_mut();
     if combat_manager.turn == Turn::Enemies {
         // combat_manager.turn = Turn::Player;
         if !enemies.is_empty() {

@@ -135,14 +135,13 @@ pub struct DebugText;
 
 pub fn button_reset_system(
     mut interaction_query: Query<(&mut BackgroundColor, &Children, &mut ToggleButton), With<Button>>,
-    mut combat_manager_query: Query<&mut CombatManager>,
+    mut combat_manager: ResMut<CombatManager>,
     mut text_query: Query<&mut Text, Without<DebugText>>,
     other_text_query: Query<&ButtonText>,
     mut debug_text_queery: Query<&mut Text, With<DebugText>>,
     mut tile_queery: Query<&mut Tile>,
 ) {
     let mut debug_text = debug_text_queery.single_mut();
-    let mut combat_manager = combat_manager_query.single_mut();
     if combat_manager.reset_buttons {
         for mut tile in &mut tile_queery {
             tile.can_be_clicked = false
@@ -175,12 +174,11 @@ pub fn button_system(
         ),
         (Changed<Interaction>, With<Button>),
     >,
-    mut combat_manager_queery: Query<&mut CombatManager>,
+    mut combat_manager: ResMut<CombatManager>,
     mut text_query: Query<&mut Text>,
     other_text_queery: Query<&ButtonText>,
     mut tile_queery: Query<&mut Tile>,
 ) {
-    let mut combat_manager = combat_manager_queery.single_mut();
     if combat_manager.turn == Turn::Player {
         for (interaction, mut color, children, button_type, mut toggle_state) in &mut interaction_query {
             let mut text = text_query.get_mut(children[0]).unwrap();
