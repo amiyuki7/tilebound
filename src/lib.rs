@@ -99,6 +99,7 @@ pub enum PlayerAction {
 
 #[derive(Resource, PartialEq)]
 pub struct CombatManager {
+    pub in_combat: bool,
     pub turn: Turn,
     pub player_action: Option<PlayerAction>,
     pub reset_buttons: bool,
@@ -107,6 +108,7 @@ pub struct CombatManager {
 impl CombatManager {
     pub fn new() -> CombatManager {
         CombatManager {
+            in_combat: false,
             turn: Turn::Player,
             player_action: None,
             reset_buttons: false,

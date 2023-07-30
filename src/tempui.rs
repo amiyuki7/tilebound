@@ -143,12 +143,9 @@ pub fn button_reset_system(
 ) {
     let mut debug_text = debug_text_queery.single_mut();
     if combat_manager.reset_buttons {
-        for mut tile in &mut tile_queery {
-            tile.can_be_clicked = false
-        }
         // debug_text.sections[0].value = "resetting buttons".to_string();
         combat_manager.reset_buttons = false;
-        if combat_manager.player_action != Some(PlayerAction::Movement) {
+        if combat_manager.in_combat && combat_manager.player_action != Some(PlayerAction::Movement) {
             combat_manager.turn = Turn::Enemies;
         }
         combat_manager.player_action = None;
