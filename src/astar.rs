@@ -1,28 +1,33 @@
 use crate::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Reflect, Component, Default, Deserialize)]
+#[derive(Reflect, Component, Default, Serialize, Deserialize, Clone, FromReflect)]
 #[reflect(Component)]
 pub struct Tile {
     pub coord: HexCoord,
     pub is_obstructed: bool,
-    pub is_hovered: bool,
-    pub is_clicked: bool,
     pub can_be_clicked: bool,
+    pub sub_region_id: Option<String>,
+    #[serde(default, skip_serializing)]
+    pub is_hovered: bool,
+    #[serde(default, skip_serializing)]
+    pub is_clicked: bool,
 }
+
 impl Tile {
-    pub fn new(q: i32, r: i32, is_obstructed: bool) -> Tile {
+    pub fn new(q: i32, r: i32, is_obstructed: bool, sub_region_id: Option<String>) -> Tile {
         Tile {
             coord: HexCoord::new(q, r),
             is_obstructed,
+            can_be_clicked: false,
+            sub_region_id,
             is_hovered: false,
             is_clicked: false,
-            can_be_clicked: false,
         }
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Reflect, Default, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Reflect, Default, Serialize, Deserialize, FromReflect)]
 pub struct HexCoord {
     pub q: i32,
     pub r: i32,

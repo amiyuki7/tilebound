@@ -1,78 +1,274 @@
 {
-    "1.1": [
-        {
-            "coord": {
-                "q": 0,
-                "r": 0
+    "1.2": {
+        "tiles": [
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             },
-            "is_obstructed": false,
-            "can_be_clicked": false,
-            "sub_region_id": null
-        },
-        {
-            "coord": {
-                "q": 0,
-                "r": 1
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             },
-            "is_obstructed": false,
-            "can_be_clicked": false,
-            "sub_region_id": null
-        },
-        {
-            "coord": {
-                "q": 1,
-                "r": 0
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             },
-            "is_obstructed": false,
-            "can_be_clicked": false,
-            "sub_region_id": "1"
-        },
-        {
-            "coord": {
-                "q": 1,
-                "r": 1
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             },
-            "is_obstructed": false,
-            "can_be_clicked": false,
-            "sub_region_id": null
-        }
-    ],
-    "1": [
-        {
-            "coord": {
-                "q": 0,
-                "r": 0
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             },
-            "is_obstructed": false,
-            "can_be_clicked": false,
-            "sub_region_id": "1.1"
-        },
-        {
-            "coord": {
-                "q": 0,
-                "r": 1
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             },
-            "is_obstructed": false,
-            "can_be_clicked": false,
-            "sub_region_id": null
-        },
-        {
-            "coord": {
-                "q": 1,
-                "r": 0
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             },
-            "is_obstructed": false,
-            "can_be_clicked": false,
-            "sub_region_id": null
-        },
-        {
-            "coord": {
-                "q": 1,
-                "r": 1
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             },
-            "is_obstructed": false,
-            "can_be_clicked": false,
-            "sub_region_id": null
-        }
-    ]
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            }
+        ],
+        "enemies": null
+    },
+    "1.1": {
+        "tiles": [
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            }
+        ],
+        "enemies": null
+    },
+    "1": {
+        "tiles": [
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": "1.1"
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": "1.2"
+            }
+        ],
+        "enemies": [
+            {
+                "hex_coord": {
+                    "q": 0,
+                    "r": 1
+                },
+                "attack_range": 2,
+                "movement_range": 1,
+                "damage": 10.0,
+                "health": {
+                    "max_hp": 10.0,
+                    "hp": 10.0
+                }
+            }
+        ]
+    }
 }

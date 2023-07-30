@@ -43,59 +43,118 @@ impl HexCoord {
     }
 }
 
-fn main() {
-    let mut tile_coords: Vec<HexCoord> = Vec::new();
-    let mut subregions: HashMap<(i32, i32), String> = HashMap::new();
-    let mut regions: HashMap<String, Option<HashMap<(i32, i32), String>>> = HashMap::new();
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Enemy {
+    pub hex_coord: HexCoord,
+    #[serde(default, skip_serializing)]
+    pub path: Option<Vec<HexCoord>>,
+    pub attack_range: i32,
+    pub movement_range: i32,
+    pub damage: f32,
+    pub health: Health,
+}
 
-    subregions.insert((0, 0), "1.1".to_string());
-    regions.insert("1".to_string(), Some(subregions));
-    subregions = HashMap::new();
-    subregions.insert((1, 0), "1".to_string());
-    regions.insert("1.1".to_string(), Some(subregions));
-
-    for q in 0..2 {
-        for r in 0..2 {
-            tile_coords.push(HexCoord::new(q, r))
+impl Enemy {
+    pub fn new(q: i32, r: i32, attack_range: i32, movement_range: i32, damage: f32, hp: f32) -> Enemy {
+        Enemy {
+            hex_coord: HexCoord::new(q, r),
+            path: None,
+            attack_range,
+            movement_range,
+            damage,
+            health: Health::new(hp),
         }
     }
+}
 
-    let obstructed_tiles: Vec<HexCoord> = vec![HexCoord { q: 10, r: 10 }];
-    let mut map: HashMap<String, Vec<Tile>> = HashMap::new();
-    for (key, value) in regions.iter() {
-        let mut tiles: Vec<Tile> = Vec::new();
-        for coord in &tile_coords {
-            let x = coord.q;
-            let z = coord.r;
-            let mut is_obstructed = false;
-            if obstructed_tiles.contains(&HexCoord::new(x, z)) {
-                is_obstructed = true;
-            }
-            let mut current_tile = Tile::new(x, z, is_obstructed, None);
-            if let Some(subregions) = value {
-                for (coord, subregion) in subregions {
-                    if x == coord.0 && z == coord.1 {
-                        current_tile.sub_region_id = Some(subregion.clone());
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Health {
+    pub max_hp: f32,
+    pub hp: f32,
+}
+impl Health {
+    pub fn new(hp: f32) -> Health {
+        Health { max_hp: hp, hp }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Region {
+    pub tiles: Vec<Tile>,
+    pub enemies: Option<Vec<Enemy>>,
+}
+
+fn main() {
+    let mut map: HashMap<String, Region> = HashMap::new();
+
+    let mut tile_subregion_ids: HashMap<(i32, i32), String> = HashMap::new();
+    let mut region_subregion_ids: HashMap<String, Option<HashMap<(i32, i32), String>>> = HashMap::new();
+
+    let mut enemy_locations: HashMap<String, Option<Vec<Enemy>>> = HashMap::new();
+    let mut enemy_list: Vec<Enemy> = Vec::new();
+    enemy_list.push(Enemy::new(0, 1, 2, 1, 10.0, 10.0));
+    enemy_locations.insert("1".to_string(), Some(enemy_list));
+    enemy_locations.insert("1.1".to_string(), None);
+    enemy_locations.insert("1.2".to_string(), None);
+
+    tile_subregion_ids.insert((1, 1), "1.1".to_string());
+    tile_subregion_ids.insert((2, 2), "1.2".to_string());
+
+    region_subregion_ids.insert("1".to_string(), Some(tile_subregion_ids));
+    region_subregion_ids.insert("1.1".to_string(), None);
+    region_subregion_ids.insert("1.2".to_string(), None);
+
+    for (key, value) in region_subregion_ids.iter() {
+        let mut tile_vec: Vec<Tile> = Vec::new();
+        let mut enemy_vec: Vec<Enemy> = Vec::new();
+
+        for q in 0..3 {
+            for r in 0..3 {
+                let mut current_tile = Tile::new(q, r, false, None);
+                if let Some(subregions) = value {
+                    for (coord, id) in subregions {
+                        if (q, r) == *coord {
+                            current_tile.sub_region_id = Some(id.clone());
+                        }
                     }
                 }
-            }
 
-            tiles.push(current_tile);
+                tile_vec.push(current_tile)
+            }
         }
-        map.insert(key.to_string(), tiles);
+
+        if let Some(enemies) = &enemy_locations[key] {
+            for enemy in enemies {
+                enemy_vec.push(enemy.clone())
+            }
+        }
+        let mut enemies: Option<Vec<Enemy>> = None;
+        if enemy_vec.len() > 0 {
+            enemies = Some(enemy_vec.clone())
+        }
+        let current_region = Region {
+            tiles: tile_vec,
+            enemies,
+        };
+
+        map.insert(key.clone(), current_region);
     }
     let serialised = serde_json::to_string(&map).unwrap();
-    fs::write("src/data.json", serialised).expect("Unable to write to file");
+    fs::write("tools/world_gen/src/data.json", serialised).expect("Unable to write to file");
 
-    let contents =
-        fs::read_to_string("src/data.json").expect("Something went wrong reading the file");
+    let contents = fs::read_to_string("tools/world_gen/src/data.json").expect("Something went wrong reading the file");
 
-    let deserialized: HashMap<&str, Vec<Tile>> = serde_json::from_str(&contents).unwrap();
+    let deserialized: HashMap<String, Region> = serde_json::from_str(&contents).unwrap();
 
-    for (id, tile_list) in deserialized {
+    for (id, region) in deserialized {
         println!("{:?}", id);
-        for tile in tile_list {
-            println!("{:?}", tile);
+        for tile in region.tiles {
+            println!("{:?}", tile)
+        }
+        if let Some(enemy_list) = region.enemies {
+            for enemy in enemy_list {
+                println!("{:?}", enemy)
+            }
         }
     }
 }

@@ -79,7 +79,7 @@ fn play_button_interaction(
     for (interaction, mut background_color) in &mut interaction_query {
         match interaction {
             Interaction::Clicked => {
-                next_game_state.set(GameState::VisibleLoading);
+                next_game_state.set(GameState::InGame);
             }
             Interaction::Hovered => *background_color = Color::rgb(0.0, 1.0, 0.0).into(),
             Interaction::None => *background_color = Color::rgb(0.0, 0.8, 0.2).into(),
@@ -147,7 +147,7 @@ pub fn button_reset_system(
         for mut tile in &mut tile_queery {
             tile.can_be_clicked = false
         }
-        debug_text.sections[0].value = "resetting buttons".to_string();
+        // debug_text.sections[0].value = "resetting buttons".to_string();
         combat_manager.reset_buttons = false;
         if combat_manager.player_action != Some(PlayerAction::Movement) {
             combat_manager.turn = Turn::Enemies;

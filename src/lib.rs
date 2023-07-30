@@ -14,6 +14,7 @@ pub use animengine::*;
 pub use astar::*;
 pub use load::*;
 pub use map_load::*;
+use serde::{Deserialize, Serialize};
 pub use tempui::*;
 
 #[derive(States, Reflect, PartialEq, Eq, Debug, Clone, Hash, Default)]
@@ -50,7 +51,7 @@ impl Player {
     }
 }
 
-#[derive(Component, Resource)]
+#[derive(Component, Resource, Serialize, Deserialize, Reflect, FromReflect)]
 pub struct Health {
     pub max_hp: f32,
     pub hp: f32,
@@ -64,15 +65,16 @@ impl Health {
 #[derive(Component)]
 pub struct HealthBar;
 
-#[derive(Component)]
+#[derive(Component, Serialize, Deserialize, Reflect, FromReflect)]
 pub struct Enemy {
     pub hex_coord: HexCoord,
     pub path: Option<Vec<HexCoord>>,
-    pub move_timer: Timer,
     pub attack_range: i32,
     pub movement_range: i32,
     pub damage: f32,
     pub health: Health,
+    #[serde(default, skip)]
+    pub move_timer: Timer,
 }
 
 impl Enemy {
@@ -178,6 +180,7 @@ pub fn update_player_pos(
     time: Res<Time>,
     mut combat_manager_query: Query<&mut CombatManager>,
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
+    mut map_context: ResMut<MapContext>,
 ) {
     let mut debug_text = debug_text_query.single_mut();
     let mut combat_manager = combat_manager_query.single_mut();
@@ -199,6 +202,17 @@ pub fn update_player_pos(
         }
     }
 
+    for (_, tile) in &tiles {
+        if tile.coord == data.hex_coord {
+            if let Some(subregion_id) = tile.sub_region_id.clone() {
+                map_context.id = subregion_id;
+                map_context.load_new_region = true;
+                combat_manager.reset_buttons = true;
+                data.path = Some(Vec::new());
+            }
+        }
+    }
+
     data.move_timer.tick(time.delta());
     if data.move_timer.just_finished() {
         let mut p_pos = player_transform.single_mut();
@@ -215,7 +229,7 @@ pub fn update_player_pos(
                     for (_, mut tile_struct) in &mut tiles {
                         // Unlocks tiles and resets button
                         combat_manager.reset_buttons = true;
-                        debug_text.sections[0].value = "reset_buttons is true".to_string();
+                        // debug_text.sections[0].value = "reset_buttons is true".to_string();
                         if !tile_struct.is_obstructed {
                             tile_struct.can_be_clicked = true;
                         }
@@ -298,8 +312,8 @@ pub fn enemy_ai(
                             e_some_path.remove(0);
                             enemy_data.path = Some(e_some_path.clone());
                         }
-                        debug_text.sections[0].value =
-                            format!("{}", hex_distance(&enemy_data.hex_coord, &player.hex_coord).to_string());
+                        // debug_text.sections[0].value =
+                        //     format!("{}", hex_distance(&enemy_data.hex_coord, &player.hex_coord).to_string());
                         if hex_distance(&enemy_data.hex_coord, &player.hex_coord) <= enemy_data.attack_range {
                             player_health.hp -= enemy_data.damage;
                             combat_manager.turn = Turn::Player;

@@ -17,7 +17,7 @@ use tilebound::*;
 use bevy_mod_picking::{self, PickableBundle};
 
 use bevy_inspector_egui::bevy_egui;
-use bevy_inspector_egui::quick::{StateInspectorPlugin, WorldInspectorPlugin};
+use bevy_inspector_egui::quick::{ResourceInspectorPlugin, StateInspectorPlugin, WorldInspectorPlugin};
 use tilebound::map_load::MapContext;
 
 fn main() {
@@ -57,6 +57,9 @@ fn main() {
         .add_plugin(MenuPlugin)
         .add_plugin(AnimEnginePlugin)
         .add_plugin(StateInspectorPlugin::<GameState>::default())
+        .add_plugin(ResourceInspectorPlugin::<MapContext>::default())
+        .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
+        .add_system(update_world)
         .add_systems(
             (
                 update_tile_pos.before(button_reset_system),
@@ -70,7 +73,7 @@ fn main() {
                 .after(spawn_scene)
                 .in_set(OnUpdate(GameState::InGame)),
         )
-        .insert_resource(MapContext::from_map("1"))
+        .insert_resource(MapContext::from_map("1".to_string()))
         // .insert_resource(MapContext {})
         .run();
 }
@@ -83,13 +86,13 @@ fn spawn_scene(
     mut spawn_entity_sender: EventWriter<SpawnEntityEvent>,
 ) {
     // !Camera
-    commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_xyz(13.50, 25.0, 20.0).looking_at(Vec3::new(13.50, 0.0, 10.0), Vec3::Y),
-            ..Default::default()
-        },
-        RaycastPickCamera::default(),
-    ));
+    // commands.spawn((
+    //     Camera3dBundle {
+    //         transform: Transform::from_xyz(13.50, 25.0, 20.0).looking_at(Vec3::new(13.50, 0.0, 10.0), Vec3::Y),
+    //         ..Default::default()
+    //     },
+    //     RaycastPickCamera::default(),
+    // ));
     // !Floor
     commands.spawn(PbrBundle {
         mesh: meshes.add(shape::Plane::from_size(50.0).into()),
@@ -126,68 +129,68 @@ fn spawn_scene(
         ..default()
     });
 
-    // !Tiles
-    for tile in load_new_map_data("1") {
-        commands.spawn((
-            PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::RegularPolygon {
-                    radius: 5.2 * SCALE,
-                    sides: 6,
-                })),
-                material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.6).into()),
-                transform: Transform::from_scale(Vec3::splat(SCALE))
-                    .with_translation(Vec3::new(
-                        HORIZONTAL_SPACING * tile.coord.q as f32 + tile.coord.r as f32 % 2.0 * HOR_OFFSET,
-                        1.0,
-                        VERTICAL_SPACING * tile.coord.r as f32,
-                    ))
-                    .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
-                ..Default::default()
-            },
-            tile,
-            PickableBundle::default(),
-            RaycastPickTarget::default(),
-            OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
-            OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
-            OnPointer::<Click>::target_component_mut::<Tile>(|_, tile| {
-                if tile.can_be_clicked {
-                    if tile.is_clicked {
-                        tile.is_clicked = false
-                    } else {
-                        tile.is_clicked = true
-                    }
-                }
-            }),
-        ));
-        // .with_children(|parent| {
-        //     parent.spawn(SceneBundle {
-        //         scene: asset_server.load("tile.glb#Scene0"),
-        //         transform: Transform::from_translation(Vec3::new(0.0, 0.0, -0.15))
-        //             .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
-        //         ..default()
-        //     });
-        // });
-    }
+    // // !Tiles
+    // for tile in load_new_map_data("1".to_string()) {
+    //     commands.spawn((
+    //         PbrBundle {
+    //             mesh: meshes.add(Mesh::from(shape::RegularPolygon {
+    //                 radius: 5.2 * SCALE,
+    //                 sides: 6,
+    //             })),
+    //             material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.6).into()),
+    //             transform: Transform::from_scale(Vec3::splat(SCALE))
+    //                 .with_translation(Vec3::new(
+    //                     HORIZONTAL_SPACING * tile.coord.q as f32 + tile.coord.r as f32 % 2.0 * HOR_OFFSET,
+    //                     1.0,
+    //                     VERTICAL_SPACING * tile.coord.r as f32,
+    //                 ))
+    //                 .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
+    //             ..Default::default()
+    //         },
+    //         tile,
+    //         PickableBundle::default(),
+    //         RaycastPickTarget::default(),
+    //         OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
+    //         OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
+    //         OnPointer::<Click>::target_component_mut::<Tile>(|_, tile| {
+    //             if tile.can_be_clicked {
+    //                 if tile.is_clicked {
+    //                     tile.is_clicked = false
+    //                 } else {
+    //                     tile.is_clicked = true
+    //                 }
+    //             }
+    //         }),
+    //     ));
+    //     // .with_children(|parent| {
+    //     //     parent.spawn(SceneBundle {
+    //     //         scene: asset_server.load("tile.glb#Scene0"),
+    //     //         transform: Transform::from_translation(Vec3::new(0.0, 0.0, -0.15))
+    //     //             .with_rotation(Quat::from_axis_angle(Vec3 { x: 1.0, y: 0.0, z: 0.0 }, -PI / 2.0)),
+    //     //         ..default()
+    //     //     });
+    //     // });
+    // }
 
     // !Enemies
-    commands.spawn((
-        PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Capsule {
-                radius: 1.2 * SCALE,
-                rings: 1,
-                depth: 1.0,
-                ..default()
-            })),
-            material: materials.add(Color::rgb(1.0, 0.5, 0.5).into()),
-            transform: Transform::from_xyz(
-                HORIZONTAL_SPACING * 6f32 + 3f32 % 2.0 * HOR_OFFSET,
-                2.5,
-                VERTICAL_SPACING * 3f32,
-            ),
-            ..default()
-        },
-        Enemy::new(6, 3, 3, 2, 10.0, 20.0),
-    ));
+    // commands.spawn((
+    //     PbrBundle {
+    //         mesh: meshes.add(Mesh::from(shape::Capsule {
+    //             radius: 1.2 * SCALE,
+    //             rings: 1,
+    //             depth: 1.0,
+    //             ..default()
+    //         })),
+    //         material: materials.add(Color::rgb(1.0, 0.5, 0.5).into()),
+    //         transform: Transform::from_xyz(
+    //             HORIZONTAL_SPACING * 6f32 + 3f32 % 2.0 * HOR_OFFSET,
+    //             2.5,
+    //             VERTICAL_SPACING * 3f32,
+    //         ),
+    //         ..default()
+    //     },
+    //     Enemy::new(6, 3, 3, 2, 10.0, 20.0),
+    // ));
 
     // !Player
     spawn_entity_sender.send(SpawnEntityEvent {
