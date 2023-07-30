@@ -51,7 +51,7 @@ impl Player {
     }
 }
 
-#[derive(Component, Resource, Serialize, Deserialize, Reflect, FromReflect)]
+#[derive(Component, Resource, Serialize, Deserialize, Reflect, FromReflect, Clone)]
 pub struct Health {
     pub max_hp: f32,
     pub hp: f32,
@@ -65,7 +65,7 @@ impl Health {
 #[derive(Component)]
 pub struct HealthBar;
 
-#[derive(Component, Serialize, Deserialize, Reflect, FromReflect)]
+#[derive(Component, Serialize, Deserialize, Reflect, FromReflect, Clone)]
 pub struct Enemy {
     pub hex_coord: HexCoord,
     pub path: Option<Vec<HexCoord>>,

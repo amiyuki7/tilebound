@@ -21,7 +21,6 @@ impl MapContext {
             current_map: load_new_map_data(id),
         }
     }
-    // fn fetch(id: &str) -> Vec<Tile>
 }
 
 #[derive(Serialize, Deserialize, Reflect, Default)]
@@ -42,7 +41,6 @@ pub fn update_world(
     mut map_context: ResMut<MapContext>,
     mut combat_manager: ResMut<CombatManager>,
     tiles_query: Query<Entity, With<Tile>>,
-    enemies_query: Query<Entity, With<Enemy>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
@@ -52,18 +50,19 @@ pub fn update_world(
         for tile in &tiles_query {
             commands.entity(tile).despawn()
         }
-        for enemy in &enemies_query {
-            commands.entity(enemy).despawn()
-        }
         let region = load_new_map_data(map_context.id.clone());
         for tile in region.tiles {
+            let mut current_colour = Color::rgba(1.0, 1.0, 1.0, 0.6);
+            if tile.sub_region_id.is_some() {
+                current_colour.set_a(1.0);
+            }
             commands.spawn((
                 PbrBundle {
                     mesh: meshes.add(Mesh::from(shape::RegularPolygon {
                         radius: 5.2 * SCALE,
                         sides: 6,
                     })),
-                    material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.6).into()),
+                    material: materials.add(current_colour.into()),
                     transform: Transform::from_scale(Vec3::splat(SCALE))
                         .with_translation(Vec3::new(
                             HORIZONTAL_SPACING * tile.coord.q as f32 + tile.coord.r as f32 % 2.0 * HOR_OFFSET,
