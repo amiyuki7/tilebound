@@ -91,13 +91,13 @@ impl Enemy {
     }
 }
 
-#[derive(PartialEq, Component, Clone)]
+#[derive(PartialEq, Component, Clone, Reflect, FromReflect)]
 pub enum PlayerAction {
     Movement,
     SpellCast(SpellType),
 }
 
-#[derive(Resource, PartialEq)]
+#[derive(Resource, PartialEq, Reflect)]
 pub struct CombatManager {
     pub in_combat: bool,
     pub turn: Turn,
@@ -115,7 +115,7 @@ impl CombatManager {
         }
     }
 }
-#[derive(PartialEq)]
+#[derive(PartialEq, Reflect)]
 pub enum Turn {
     Player,
     Allies,
@@ -204,11 +204,13 @@ pub fn update_player_pos(
 
     for (_, tile) in &tiles {
         if tile.coord == data.hex_coord {
-            if let Some(subregion_id) = tile.sub_region_id.clone() {
-                map_context.id = subregion_id;
-                map_context.load_new_region = true;
-                combat_manager.reset_buttons = true;
-                data.path = Some(Vec::new());
+            if !combat_manager.in_combat {
+                if let Some(subregion_id) = tile.sub_region_id.clone() {
+                    map_context.id = subregion_id;
+                    map_context.load_new_region = true;
+                    combat_manager.reset_buttons = true;
+                    data.path = Some(Vec::new());
+                }
             }
         }
     }
@@ -326,6 +328,7 @@ pub fn enemy_ai(
                 }
             }
         } else {
+            combat_manager.in_combat = false;
             combat_manager.turn = Turn::Player
         }
     }

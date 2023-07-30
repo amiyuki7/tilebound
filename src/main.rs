@@ -58,6 +58,7 @@ fn main() {
         .add_plugin(AnimEnginePlugin)
         .add_plugin(StateInspectorPlugin::<GameState>::default())
         .add_plugin(ResourceInspectorPlugin::<MapContext>::default())
+        .add_plugin(ResourceInspectorPlugin::<CombatManager>::default())
         .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
         .add_system(update_world)
         .add_systems(

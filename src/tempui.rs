@@ -106,7 +106,7 @@ pub enum ButtonType {
     Movement,
     Spell(SpellType),
 }
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, FromReflect, Reflect)]
 pub enum SpellType {
     Fireball,
     Placeholder1,

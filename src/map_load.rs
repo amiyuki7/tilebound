@@ -40,6 +40,7 @@ pub fn load_new_map_data(id: String) -> Region {
 pub fn update_world(
     mut commands: Commands,
     mut map_context: ResMut<MapContext>,
+    mut combat_manager: ResMut<CombatManager>,
     tiles_query: Query<Entity, With<Tile>>,
     enemies_query: Query<Entity, With<Enemy>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -47,10 +48,6 @@ pub fn update_world(
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
 ) {
     if map_context.load_new_region {
-        if !debug_text_query.is_empty() {
-            let mut debug_text = debug_text_query.single_mut();
-            debug_text.sections[0].value = format!("Current world: {}", map_context.id.clone());
-        }
         map_context.load_new_region = false;
         for tile in &tiles_query {
             commands.entity(tile).despawn()
@@ -93,6 +90,7 @@ pub fn update_world(
             ));
         }
         if let Some(enemies) = region.enemies {
+            combat_manager.in_combat = true;
             for enemy in enemies {
                 commands.spawn((
                     PbrBundle {
@@ -113,6 +111,16 @@ pub fn update_world(
                     enemy,
                 ));
             }
+        } else {
+            combat_manager.in_combat = false
+        }
+        if !debug_text_query.is_empty() {
+            let mut debug_text = debug_text_query.single_mut();
+            debug_text.sections[0].value = format!(
+                "Current world: {}, In combat: {}",
+                map_context.id.clone(),
+                combat_manager.in_combat
+            );
         }
     }
 }
