@@ -42,6 +42,7 @@ fn main() {
         )
         .add_plugin(FbxPlugin)
         .add_plugin(HookPlugin)
+        .add_startup_system(reset_world)
         .add_plugins(DefaultPickingPlugins.build().disable::<DefaultHighlightingPlugin>())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())

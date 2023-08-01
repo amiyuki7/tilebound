@@ -51,7 +51,7 @@ impl Player {
     }
 }
 
-#[derive(Component, Resource, Serialize, Deserialize, Reflect, FromReflect, Clone)]
+#[derive(Component, Resource, Serialize, Deserialize, Reflect, FromReflect, Clone, Debug)]
 pub struct Health {
     pub max_hp: f32,
     pub hp: f32,
@@ -65,7 +65,7 @@ impl Health {
 #[derive(Component)]
 pub struct HealthBar;
 
-#[derive(Component, Serialize, Deserialize, Reflect, FromReflect, Clone)]
+#[derive(Component, Serialize, Deserialize, Reflect, FromReflect, Clone, Debug)]
 pub struct Enemy {
     pub hex_coord: HexCoord,
     pub path: Option<Vec<HexCoord>>,
@@ -205,9 +205,8 @@ pub fn update_player_pos(
     for (_, tile) in &tiles {
         if tile.coord == data.hex_coord {
             if !combat_manager.in_combat {
-                if let Some(subregion_id) = tile.sub_region_id.clone() {
-                    map_context.id = subregion_id;
-                    map_context.load_new_region = true;
+                if let Some(subregion_data) = tile.sub_region_id.clone() {
+                    map_context.change_map(subregion_data.id);
                     combat_manager.reset_buttons = true;
                     data.path = Some(Vec::new());
                 }
@@ -270,6 +269,7 @@ pub fn enemy_ai(
     time: Res<Time>,
     mut player_health: ResMut<Health>,
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
+    mut map_context: ResMut<MapContext>,
 ) {
     let mut debug_text = debug_text_query.single_mut();
 
@@ -329,6 +329,7 @@ pub fn enemy_ai(
             }
         } else {
             combat_manager.in_combat = false;
+            map_context.clear_combat_data();
             combat_manager.turn = Turn::Player
         }
     }

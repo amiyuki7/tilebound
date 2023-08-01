@@ -7,14 +7,14 @@ pub struct Tile {
     pub coord: HexCoord,
     pub is_obstructed: bool,
     pub can_be_clicked: bool,
-    pub sub_region_id: Option<String>,
+    pub sub_region_id: Option<SubregionData>,
     #[serde(default, skip_serializing)]
     pub is_hovered: bool,
     #[serde(default, skip_serializing)]
     pub is_clicked: bool,
 }
 impl Tile {
-    pub fn new(q: i32, r: i32, is_obstructed: bool, sub_region_id: Option<String>) -> Tile {
+    pub fn new(q: i32, r: i32, is_obstructed: bool, sub_region_id: Option<SubregionData>) -> Tile {
         Tile {
             coord: HexCoord::new(q, r),
             is_obstructed,
@@ -84,21 +84,46 @@ pub struct Region {
     pub enemies: Option<Vec<Enemy>>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SubregionData {
+    pub id: String,
+    pub subregion_type: SubregionType,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum SubregionType {
+    UnclearedCombat,
+    ClearedCombat,
+    Other,
+}
+
 fn main() {
     let mut map: HashMap<String, Region> = HashMap::new();
 
-    let mut tile_subregion_ids: HashMap<(i32, i32), String> = HashMap::new();
-    let mut region_subregion_ids: HashMap<String, Option<HashMap<(i32, i32), String>>> = HashMap::new();
+    let mut tile_subregion_ids: HashMap<(i32, i32), SubregionData> = HashMap::new();
+    let mut region_subregion_ids: HashMap<String, Option<HashMap<(i32, i32), SubregionData>>> = HashMap::new();
 
     let mut enemy_locations: HashMap<String, Option<Vec<Enemy>>> = HashMap::new();
     let mut enemy_list: Vec<Enemy> = Vec::new();
     enemy_list.push(Enemy::new(0, 1, 2, 1, 10.0, 10.0));
-    enemy_locations.insert("1".to_string(), Some(enemy_list));
-    enemy_locations.insert("1.1".to_string(), None);
+    enemy_locations.insert("1".to_string(), None);
+    enemy_locations.insert("1.1".to_string(), Some(enemy_list));
     enemy_locations.insert("1.2".to_string(), None);
 
-    tile_subregion_ids.insert((1, 1), "1.1".to_string());
-    tile_subregion_ids.insert((2, 2), "1.2".to_string());
+    tile_subregion_ids.insert(
+        (1, 1),
+        SubregionData {
+            id: "1.1".to_string(),
+            subregion_type: SubregionType::UnclearedCombat,
+        },
+    );
+    tile_subregion_ids.insert(
+        (2, 2),
+        SubregionData {
+            id: "1.2".to_string(),
+            subregion_type: SubregionType::Other,
+        },
+    );
 
     region_subregion_ids.insert("1".to_string(), Some(tile_subregion_ids));
     region_subregion_ids.insert("1.1".to_string(), None);

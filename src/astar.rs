@@ -1,13 +1,13 @@
 use crate::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Reflect, Component, Default, Serialize, Deserialize, Clone, FromReflect)]
+#[derive(Reflect, Component, Default, Serialize, Deserialize, Clone, FromReflect, Debug)]
 #[reflect(Component)]
 pub struct Tile {
     pub coord: HexCoord,
     pub is_obstructed: bool,
     pub can_be_clicked: bool,
-    pub sub_region_id: Option<String>,
+    pub sub_region_id: Option<SubregionData>,
     #[serde(default, skip_serializing)]
     pub is_hovered: bool,
     #[serde(default, skip_serializing)]
@@ -15,7 +15,7 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub fn new(q: i32, r: i32, is_obstructed: bool, sub_region_id: Option<String>) -> Tile {
+    pub fn new(q: i32, r: i32, is_obstructed: bool, sub_region_id: Option<SubregionData>) -> Tile {
         Tile {
             coord: HexCoord::new(q, r),
             is_obstructed,
