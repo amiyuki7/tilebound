@@ -189,24 +189,34 @@ pub fn background_animation(
             let anim_elapsed = anim_player.elapsed();
             // trace!("Elapsed {} / {}", anim_elapsed, target_anim.duration);
 
-            // Linear blend all but index 8 and 9 (move/run)
-            // Move [8] or Run [9] should be "looping" (re-pending itself) unless explicitly overriden
-            if anim_player.elapsed() > target_anim.duration {
-                // Move animation
-                if target_anim.handle == re_map.0.get(re_type).unwrap().animations[8].handle {
-                    rentity.pend(8);
-                    return;
-                }
-
-                if target_anim.handle == re_map.0.get(re_type).unwrap().animations[9].handle {
-                    rentity.pend(9);
-                    return;
-                }
-            }
-
+            // // Linear blend all but index 8 and 9 (move/run)
+            // // Move [8] or Run [9] should be "looping" (re-pending itself) unless explicitly overriden
+            // if anim_player.elapsed() > target_anim.duration {
+            //     // Move animation
+            //     if target_anim.handle == re_map.0.get(re_type).unwrap().animations[8].handle {
+            //         rentity.pend(8);
+            //         return;
+            //     }
+            //
+            //     if target_anim.handle == re_map.0.get(re_type).unwrap().animations[9].handle {
+            //         rentity.pend(9);
+            //         return;
+            //     }
+            // }
+            //
             if anim_player.elapsed() > target_anim.duration - 0.5
                 && target_anim.handle != re_map.0.get(re_type).unwrap().animations[8].handle
                 && target_anim.handle != re_map.0.get(re_type).unwrap().animations[9].handle
+            {
+                match rentity.idle_state {
+                    IdleState::Unarmed => rentity.pend(3),
+                    IdleState::Armed => rentity.pend(2),
+                }
+            }
+
+            if anim_player.elapsed() > target_anim.duration
+                && (target_anim.handle == re_map.0.get(re_type).unwrap().animations[8].handle
+                    || target_anim.handle == re_map.0.get(re_type).unwrap().animations[9].handle)
             {
                 match rentity.idle_state {
                     IdleState::Unarmed => rentity.pend(3),
