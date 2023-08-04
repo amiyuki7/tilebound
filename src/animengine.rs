@@ -85,7 +85,9 @@ pub fn spawn_rigged_entity(
                     .spawn(HookedSceneBundle {
                         scene: SceneBundle {
                             scene: re_map.0.get(&REntityType::Kraug).unwrap().scene.clone_weak(),
-                            transform: Transform::from_xyz(0.0, 1.0, 0.0),
+                            transform: Transform::from_xyz(0.0, 1.0, 0.0)
+                                // π/6 is "Forwards". All other directions are +/- multiples of π/3
+                                .with_rotation(Quat::from_rotation_y(PI / 2.0)),
                             ..default()
                         },
                         hook: SceneHook::new(move |entity, commands| {
@@ -120,14 +122,10 @@ pub fn spawn_rigged_entity(
             let camera = commands
                 .spawn((
                     Camera3dBundle {
-                        // transform: Transform::from_xyz(0.0, 5.0, -8.0)
                         transform: Transform::from_xyz(0.0, 25.0, -20.0)
                             // Increase x rotation a bit -> more "birds eye"
                             // Decrease x rotation a bit -> more "look at the sky"
-                            .with_rotation(
-                                /*Quat::from_rotation_x(PI * 13.0 / 12.0)*/
-                                Quat::from_rotation_x(4.0) * Quat::from_rotation_z(PI),
-                            ),
+                            .with_rotation(Quat::from_rotation_x(4.0) * Quat::from_rotation_z(PI)),
                         ..default()
                     },
                     PanOrbitCamera {
@@ -143,10 +141,11 @@ pub fn spawn_rigged_entity(
                 .insert(PlayerCameraMarker)
                 .id();
 
-            commands
-                .entity(spawned_entity)
-                .insert(Player::new(0, 0))
-                .add_child(camera);
+            commands.entity(spawned_entity).insert(Player::new(
+                0,
+                0,
+                re_map.0.get(&event.entity_type).unwrap().animations[9].duration,
+            ));
         }
     }
 }

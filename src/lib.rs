@@ -32,9 +32,7 @@ pub enum GameState {
     InGame,
 }
 
-///
-
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Player {
     pub hex_coord: HexCoord,
     pub path: Option<Vec<HexCoord>>,
@@ -42,12 +40,31 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(q: i32, r: i32) -> Player {
+    /// `move_timer_duration`: The duration of the running animation of the REntity
+    /// Access like so:
+    /// ```
+    /// fn my_system(re_map: Res<REntityMap>) {
+    ///     let run_dur = re_map.0.get(&REntityType::Kraug).unwrap().animations[9].duration;
+    /// }
+    /// ```
+    pub fn new(q: i32, r: i32, move_timer_duration: f32) -> Player {
+        // Set it close to the just finished amount so we can snap straight into animations during movement
+        let mut timer = Timer::from_seconds(move_timer_duration, TimerMode::Repeating);
+        timer.set_elapsed(::std::time::Duration::from_secs_f32(move_timer_duration - 0.05));
+
         Player {
             hex_coord: HexCoord::new(q, r),
             path: None,
-            move_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
+            // move_timer: Timer::from_seconds(move_timer_duration, TimerMode::Repeating),
+            move_timer: timer,
         }
+    }
+
+    /// "Resetting" the move timer is setting the elapsed to a split second before just_finished()
+    /// triggers, as we want movement animations to run ASAP
+    pub fn reset_move_timer(&mut self) {
+        self.move_timer
+            .set_elapsed(self.move_timer.duration() - ::std::time::Duration::from_secs_f32(0.05));
     }
 }
 
