@@ -45,7 +45,7 @@ fn main() {
         .add_startup_system(reset_world)
         .add_plugins(DefaultPickingPlugins.build().disable::<DefaultHighlightingPlugin>())
         .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(WorldInspectorPlugin::new())
         // .add_plugin(EditorPlugin::default())
         .insert_resource(ClearColor(Color::ALICE_BLUE))
@@ -59,28 +59,33 @@ fn main() {
         .add_plugin(AnimEnginePlugin)
         .add_plugin(StateInspectorPlugin::<GameState>::default())
         .add_plugin(ResourceInspectorPlugin::<MapContext>::default())
-        .add_plugin(ResourceInspectorPlugin::<CombatManager>::default())
-        .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
+        // .add_plugin(ResourceInspectorPlugin::<CombatManager>::default())
+        // .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
         .add_system(update_world)
         .add_plugin(StateInspectorPlugin::<GIState>::default())
+        .register_type::<Tile>()
         .add_systems(
             (
-                update_tile_pos.before(button_reset_system),
-                update_player_pos,
-                button_system,
-                button_reset_system.before(button_system),
-                enemy_ai,
-                update_health_bar,
-                update_enemy_health,
+                // update_tile_pos.before(button_reset_system),
+                // update_player_pos,
+                // button_system,
+                // button_reset_system.before(button_system),
+                // enemy_ai,
+                // update_health_bar,
+                // update_enemy_health,
+                update_tile_state_stable,
             )
-                .after(spawn_scene)
-                .in_set(OnUpdate(GameState::InGame)),
+                // .after(spawn_scene)
+                .in_set(OnUpdate(GameState::InGame))
+                .in_set(OnUpdate(GIState::Unlocked)),
         )
         .insert_resource(MapContext::from_map("1".to_string()))
         .insert_resource(CombatManager::new())
+        .add_system(move_player_stable.in_set(OnUpdate(GIState::LockedByMovement)))
         .run();
 }
 
+// TODO: Remove in future commit
 fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
