@@ -135,15 +135,26 @@ pub fn update_world(
                 RaycastPickTarget::default(),
                 OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
                 OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
-                OnPointer::<Click>::target_component_mut::<Tile>(|_, tile| {
-                    if tile.can_be_clicked {
-                        if tile.is_clicked {
-                            tile.is_clicked = false
-                        } else {
-                            tile.is_clicked = true
+                OnPointer::<Click>::run_callback(
+                    |In(event): In<ListenedEvent<Click>>,
+                     mut tiles: Query<(Entity, &mut Tile)>,
+                     gi_state: Res<State<GIState>>| {
+                        // Clicking should only be allowed during GIState::Unlocked
+                        if gi_state.0 == GIState::Locked {
+                            return Bubble::Up;
                         }
-                    }
-                }),
+
+                        for (entity, mut tile) in &mut tiles {
+                            if entity == event.target {
+                                tile.is_clicked = true;
+                                let coord = tile.coord;
+                                debug!("{} {}", coord.q, coord.r);
+                            }
+                        }
+
+                        Bubble::Up
+                    },
+                ),
             ));
         }
         if let Some(enemies) = region.enemies {
