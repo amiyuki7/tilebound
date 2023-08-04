@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
+use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::RaycastPickCamera;
@@ -194,6 +195,61 @@ pub fn change_gi_state(
                     }
                 }
             }
+        }
+    }
+}
+
+/// Calculates the y rotation of the player when transitioning from a tile to an adjacent tile
+///
+/// ```
+/// Neighbours when r is EVEN     Neighbours when r is ODD
+///
+///       forwards π/2                  forwards π/2
+///            ↑                             ↑
+///            |                             |
+///            |                             |
+///          _____                         _____
+///         /     \                       /     \
+///   _____/  q+1  \_____           _____/  q+1  \_____
+///  /     \   r   /     \         /     \   r   /     \
+/// /   q   \_____/   q   \       /  q+1  \_____/  q+1  \
+/// \  r-1  /     \  r+1  /       \  r-1  /     \  r+1  /
+///  \_____/   q   \_____/         \_____/   q   \_____/  ---→ default 0 y rotation
+///  /     \   r   /     \         /     \   r   /     \
+/// /  q-1  \_____/  q-1  \       /   q   \_____/   q   \
+/// \  r-1  /     \  r+1  /       \  r-1  /     \  r+1  /
+///  \_____/  q-1  \_____/         \_____/  q-1  \_____/
+///        \   r   /                     \   r   /
+///         \_____/                       \_____/
+/// ```
+/// In line 90 of src/animengine.rs it is stipulated that a rotation of π/2 is "forwards", such
+/// that r stays constant moving in the "forwards/backwards" direction
+pub fn rotation_to(player: HexCoord, adjacent: HexCoord) -> f32 {
+    let forwards = PI / 2.0;
+
+    if player.r == adjacent.r {
+        if adjacent.q == player.q + 1 {
+            return forwards;
+        } else if adjacent.q == player.q - 1 {
+            return forwards + PI;
+        }
+    }
+
+    if player.r % 2 == 0 {
+        match (adjacent.q, adjacent.r) {
+            (q, r) if q == player.q && r == player.r + 1 => forwards + -PI / 3.0,
+            (q, r) if q == player.q - 1 && r == player.r + 1 => forwards + 2.0 * -PI / 3.0,
+            (q, r) if q == player.q && r == player.r - 1 => forwards + PI / 3.0,
+            (q, r) if q == player.q - 1 && r == player.r - 1 => forwards + 2.0 * PI / 3.0,
+            _ => unreachable!(),
+        }
+    } else {
+        match (adjacent.q, adjacent.r) {
+            (q, r) if q == player.q + 1 && r == player.r + 1 => forwards + -PI / 3.0,
+            (q, r) if q == player.q && r == player.r + 1 => forwards + 2.0 * -PI / 3.0,
+            (q, r) if q == player.q + 1 && r == player.r - 1 => forwards + PI / 3.0,
+            (q, r) if q == player.q && r == player.r - 1 => forwards + 2.0 * PI / 3.0,
+            _ => unreachable!(),
         }
     }
 }
