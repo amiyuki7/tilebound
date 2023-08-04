@@ -199,6 +199,34 @@ pub fn change_gi_state(
     }
 }
 
+pub fn update_tile_state_stable(
+    mut tiles: Query<(&Handle<StandardMaterial>, &mut Tile)>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
+    player: Query<&Player>,
+) {
+    for (material_handle, mut tile) in &mut tiles {
+        let raw_material = materials.get_mut(material_handle).unwrap();
+
+        // if tile.is_hovered {
+        //     raw_material.base_color = Color::BLUE;
+        // } else {
+        //     raw_material.base_color = Color::LIME_GREEN;
+        // }
+
+        if tile.is_clicked {
+            if let Ok(player) = player.get_single() {
+                if player.hex_coord == tile.coord {
+                    tile.is_clicked = false;
+                    // TODO: Pressed your own tile - inventory?
+                } else {
+                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::LockedByMovement));
+                }
+            }
+        }
+    }
+}
+
 /// Calculates the y rotation of the player when transitioning from a tile to an adjacent tile
 ///
 /// ```
@@ -250,6 +278,94 @@ pub fn rotation_to(player: HexCoord, adjacent: HexCoord) -> f32 {
             (q, r) if q == player.q + 1 && r == player.r - 1 => forwards + PI / 3.0,
             (q, r) if q == player.q && r == player.r - 1 => forwards + 2.0 * PI / 3.0,
             _ => unreachable!(),
+        }
+    }
+}
+
+pub fn move_player_stable(
+    mut tiles: Query<(&Handle<StandardMaterial>, &mut Tile)>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
+    mut player_query: Query<(&mut Transform, &mut Player, &mut RiggedEntity)>,
+    // mut camera_query: Query<(&mut Transform, &mut PlayerCameraMarker), Without<Player>>,
+    // mut r_entities: Query<&mut RiggedEntity>,
+    time: Res<Time>,
+    mut map_context: ResMut<MapContext>,
+) {
+    let (mut p_transform, mut p, mut p_rentity) = player_query.get_single_mut().unwrap();
+
+    // Calculate only once
+    if p.path.is_none() {
+        let end_tile = tiles.iter_mut().find_map(|(_, mut t)| {
+            if t.is_clicked {
+                t.is_clicked = false;
+                Some(t.coord)
+            } else {
+                None
+            }
+        });
+
+        if let Some(end_tile) = end_tile {
+            let start_tile = p.hex_coord;
+
+            let obstructed_tiles: Vec<HexCoord> = tiles
+                .iter()
+                .filter_map(|(_, t)| if t.is_obstructed { Some(t.coord) } else { None })
+                .collect();
+
+            p.path = astar(start_tile, end_tile, &obstructed_tiles);
+            // TODO: Clarify the None case for the astar func... I think input has been sanitised by now (assert isn't
+            // panicking so that's a good sign)
+            assert!(p.path.is_some());
+
+            trace!("path len {}", p.path.as_ref().unwrap().len());
+
+            // Highlight the path yellow
+            // tiles.for_each(|(material_handle, tile)| {
+            //     if p.path.as_ref().unwrap().contains(&tile.coord) {
+            //         materials.get_mut(material_handle).unwrap().base_color = Color::YELLOW;
+            //     }
+            // });
+        }
+    }
+
+    // Timer just finished -> Set player transform (calculate by mapping qr to xz) -> Pend animation
+
+    p.move_timer.tick(time.delta());
+    if p.move_timer.just_finished() {
+        let pos = p.hex_coord;
+
+        let curr_tile = tiles.iter().find(|(_, tile)| tile.coord == pos);
+
+        // If the player walks into a subregion tile, terminate pathfind and change the map
+        if let Some((_, tile)) = curr_tile {
+            if let Some(ref subregion_data) = tile.sub_region_id {
+                trace!("Changing subregion!");
+                map_context.change_map(subregion_data.id.clone());
+                p.path = Some(vec![]);
+                p.reset_move_timer();
+                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
+            }
+        }
+
+        if let Some(player_path) = &mut p.path {
+            p_transform.translation.x = pos.q as f32 * HORIZONTAL_SPACING + pos.r as f32 % 2.0 * HOR_OFFSET;
+            p_transform.translation.z = pos.r as f32 * VERTICAL_SPACING;
+
+            if !player_path.is_empty() {
+                let next_tile = player_path.remove(0);
+
+                if p.hex_coord != next_tile {
+                    p_transform.rotation = Quat::from_rotation_y(rotation_to(p.hex_coord, next_tile));
+                    p_rentity.pend(9);
+                }
+
+                p.hex_coord = next_tile;
+            } else {
+                p.path = None;
+                p.reset_move_timer();
+                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
+            }
         }
     }
 }
