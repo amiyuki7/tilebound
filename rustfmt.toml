@@ -1,1 +1,4 @@
 max_width = 120
+# nightly features - run with `cargo +nightly fmt`
+wrap_comments = true
+comment_width = 120
