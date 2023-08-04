@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
 use bevy::prelude::*;
+use bevy_mod_picking::prelude::RaycastPickCamera;
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 
 pub mod animengine;
@@ -148,6 +149,54 @@ pub const SCALE: f32 = 0.54;
 pub const HORIZONTAL_SPACING: f32 = 5.2 * SCALE;
 pub const VERTICAL_SPACING: f32 = 4.5 * SCALE;
 pub const HOR_OFFSET: f32 = 2.6 * SCALE;
+
+#[derive(States, Reflect, PartialEq, Eq, Debug, Clone, Copy, Hash, Default)]
+/// Global Interaction State
+pub enum GIState {
+    /// Disable raycasting
+    Locked,
+    LockedByMovement,
+    #[default]
+    /// Enanble raycasting
+    Unlocked,
+}
+
+pub struct GlobalInteractionLockEvent(GIState);
+
+pub fn change_gi_state(
+    mut commands: Commands,
+    mut gi_lock_event: EventReader<GlobalInteractionLockEvent>,
+    mut next_gi_state: ResMut<NextState<GIState>>,
+    raycast_camera: Query<Entity, With<RaycastPickCamera>>,
+    player_camera: Query<Entity, With<PlayerCameraMarker>>,
+    mut player: Query<&mut Player>,
+) {
+    let raycast_camera = raycast_camera.get_single();
+    let player_camera = player_camera.get_single();
+
+    for event in gi_lock_event.iter() {
+        match event.0 {
+            // Disable raycasting
+            s @ (GIState::Locked | GIState::LockedByMovement) => {
+                next_gi_state.set(s);
+
+                if let Ok(player_camera) = player_camera {
+                    commands.entity(player_camera).remove::<RaycastPickCamera>();
+                }
+            }
+            // Enable raycasting
+            s @ GIState::Unlocked => {
+                next_gi_state.set(s);
+
+                if raycast_camera.is_err() {
+                    if let Ok(player_camera) = player_camera {
+                        commands.entity(player_camera).insert(RaycastPickCamera::default());
+                    }
+                }
+            }
+        }
+    }
+}
 
 pub fn update_tile_pos(
     mut tiles: Query<(&mut Transform, &mut Tile), (With<Tile>, Without<Player>, Without<PlayerAction>)>,

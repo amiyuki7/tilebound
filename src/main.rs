@@ -62,6 +62,7 @@ fn main() {
         .add_plugin(ResourceInspectorPlugin::<CombatManager>::default())
         .add_system(spawn_scene.in_schedule(OnEnter(GameState::InGame)))
         .add_system(update_world)
+        .add_plugin(StateInspectorPlugin::<GIState>::default())
         .add_systems(
             (
                 update_tile_pos.before(button_reset_system),
