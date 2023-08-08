@@ -89,93 +89,11 @@
                 }
             }
         ],
-        "enemies": null
-    },
-    "1.2": {
-        "tiles": [
-            {
-                "coord": {
-                    "q": 0,
-                    "r": 0
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            },
-            {
-                "coord": {
-                    "q": 0,
-                    "r": 1
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            },
-            {
-                "coord": {
-                    "q": 0,
-                    "r": 2
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            },
-            {
-                "coord": {
-                    "q": 1,
-                    "r": 0
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            },
-            {
-                "coord": {
-                    "q": 1,
-                    "r": 1
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            },
-            {
-                "coord": {
-                    "q": 1,
-                    "r": 2
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            },
-            {
-                "coord": {
-                    "q": 2,
-                    "r": 0
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            },
-            {
-                "coord": {
-                    "q": 2,
-                    "r": 1
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            },
-            {
-                "coord": {
-                    "q": 2,
-                    "r": 2
-                },
-                "is_obstructed": false,
-                "can_be_clicked": false,
-                "sub_region_id": null
-            }
-        ],
-        "enemies": null
+        "enemies": null,
+        "player_spawn_spot": {
+            "q": 0,
+            "r": 0
+        }
     },
     "1.1": {
         "tiles": [
@@ -275,6 +193,100 @@
                     "hp": 10.0
                 }
             }
-        ]
+        ],
+        "player_spawn_spot": {
+            "q": 5,
+            "r": 5
+        }
+    },
+    "1.2": {
+        "tiles": [
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            }
+        ],
+        "enemies": null,
+        "player_spawn_spot": {
+            "q": 2,
+            "r": 3
+        }
     }
 }

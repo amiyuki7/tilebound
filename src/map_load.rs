@@ -50,6 +50,7 @@ impl MapContext {
 pub struct Region {
     pub tiles: Vec<Tile>,
     pub enemies: Option<Vec<Enemy>>,
+    pub player_spawn_spot: HexCoord,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Reflect, FromReflect)]
@@ -66,6 +67,7 @@ pub enum SubregionType {
 }
 
 pub fn reset_world() {
+    debug!("Reset the World!");
     let default_world = fs::read_to_string("default_world.json").expect("Something went wrong reading the file");
     fs::write("world.json", default_world).expect("Unable to write to file");
 }
@@ -86,6 +88,7 @@ pub fn update_world(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
+    mut player_data_query: Query<(&mut Player, &mut Transform)>,
 ) {
     if map_context.load_new_region {
         map_context.load_new_region = false;
@@ -96,6 +99,14 @@ pub fn update_world(
             commands.entity(enemy).despawn()
         }
         let region = load_new_map_data(map_context.id.clone());
+        let mut data = player_data_query.get_single_mut();
+        if let Ok((mut player_data, mut player_transform)) = data {
+            player_data.hex_coord = region.player_spawn_spot;
+            player_transform.translation.x = region.player_spawn_spot.q as f32 * HORIZONTAL_SPACING
+                + region.player_spawn_spot.r as f32 % 2.0 * HOR_OFFSET;
+            player_transform.translation.z = region.player_spawn_spot.r as f32 * VERTICAL_SPACING;
+        }
+
         for tile in region.tiles {
             let mut current_colour = Color::rgba(1.0, 1.0, 1.0, 0.6);
             if let Some(ref sub_region_data) = tile.sub_region_id {
