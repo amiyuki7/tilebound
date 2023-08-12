@@ -8,14 +8,17 @@ use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 
 pub mod animengine;
 pub mod astar;
+pub mod combat;
 pub mod load;
 pub mod map_load;
 pub mod tempui;
 
 pub use animengine::*;
 pub use astar::*;
+pub use combat::*;
 pub use load::*;
 pub use map_load::*;
+use nanoid::format;
 use serde::{Deserialize, Serialize};
 pub use tempui::*;
 
@@ -39,6 +42,7 @@ pub struct Player {
     pub hex_coord: HexCoord,
     pub path: Option<Vec<HexCoord>>,
     pub move_timer: Timer,
+    pub health: Health,
 }
 
 impl Player {
@@ -59,6 +63,7 @@ impl Player {
             path: None,
             // move_timer: Timer::from_seconds(move_timer_duration, TimerMode::Repeating),
             move_timer: timer,
+            health: Health::new(100.0),
         }
     }
 
@@ -93,6 +98,8 @@ pub struct Enemy {
     pub damage: f32,
     pub health: Health,
     #[serde(default, skip)]
+    pub ended_turn: bool,
+    #[serde(default, skip)]
     pub move_timer: Timer,
 }
 
@@ -106,42 +113,18 @@ impl Enemy {
             movement_range,
             damage,
             health: Health::new(hp),
+            ended_turn: false,
         }
     }
 }
 
-#[derive(PartialEq, Component, Clone, Reflect, FromReflect)]
-pub enum PlayerAction {
-    Movement,
-    SpellCast(SpellType),
-}
+// #[derive(PartialEq, Component, Clone, Reflect, FromReflect, Debug)]
+// pub enum PlayerAction {
+//     Movement,
+//     Action(AcitonType),
+// }
 
-#[derive(Resource, PartialEq, Reflect)]
-pub struct CombatManager {
-    pub in_combat: bool,
-    pub turn: Turn,
-    pub player_action: Option<PlayerAction>,
-    pub reset_buttons: bool,
-}
-
-impl CombatManager {
-    pub fn new() -> CombatManager {
-        CombatManager {
-            in_combat: false,
-            turn: Turn::Player,
-            player_action: None,
-            reset_buttons: false,
-        }
-    }
-}
-#[derive(PartialEq, Reflect)]
-pub enum Turn {
-    Player,
-    Allies,
-    Enemies,
-}
-
-#[derive(Component)]
+#[derive(Component, PartialEq)]
 pub enum Spell {
     Fireball,
 }
@@ -203,6 +186,8 @@ pub fn update_tile_state_stable(
     mut tiles: Query<(&Handle<StandardMaterial>, &mut Tile)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
+    mut opt_combat_manager: Option<ResMut<CombatManager>>,
+    // mut opt_spells: Option<Query<(&mut Transform, &Spell)>>,
     player: Query<&Player>,
 ) {
     for (material_handle, mut tile) in &mut tiles {
@@ -220,7 +205,19 @@ pub fn update_tile_state_stable(
                     tile.is_clicked = false;
                     // TODO: Pressed your own tile - inventory?
                 } else {
-                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::LockedByMovement));
+                    if let Some(ref mut combat_manager) = opt_combat_manager {
+                        if let Turn::Player(ref phase) = combat_manager.turn {
+                            match phase {
+                                Phase::Movement => {
+                                    debug!("Movement phase");
+                                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::LockedByMovement))
+                                }
+                                _ => {}
+                            }
+                        }
+                    } else {
+                        gi_lock_sender.send(GlobalInteractionLockEvent(GIState::LockedByMovement));
+                    }
                 }
             }
         }
@@ -304,7 +301,8 @@ pub fn move_player_stable(
                 None
             }
         });
-
+        let msg = format!("{:?}", end_tile);
+        debug!(msg);
         if let Some(end_tile) = end_tile {
             let start_tile = p.hex_coord;
 
@@ -321,11 +319,11 @@ pub fn move_player_stable(
             trace!("path len {}", p.path.as_ref().unwrap().len());
 
             // Highlight the path yellow
-            // tiles.for_each(|(material_handle, tile)| {
-            //     if p.path.as_ref().unwrap().contains(&tile.coord) {
-            //         materials.get_mut(material_handle).unwrap().base_color = Color::YELLOW;
-            //     }
-            // });
+            tiles.for_each(|(material_handle, tile)| {
+                if p.path.as_ref().unwrap().contains(&tile.coord) {
+                    materials.get_mut(material_handle).unwrap().base_color = Color::YELLOW.with_a(0.6);
+                }
+            });
         }
     }
 
@@ -365,229 +363,148 @@ pub fn move_player_stable(
                 p.path = None;
                 p.reset_move_timer();
                 gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
-            }
-        }
-    }
-}
-
-pub fn update_tile_pos(
-    mut tiles: Query<(&mut Transform, &mut Tile), (With<Tile>, Without<Player>, Without<PlayerAction>)>,
-    mut combat_manager: ResMut<CombatManager>,
-    mut spell_casts_query: Query<(&mut Transform, &PlayerAction), With<PlayerAction>>,
-    mut enemies: Query<&mut Enemy>,
-) {
-    for (mut tile_transform, mut tile_struct) in &mut tiles {
-        tile_transform.translation.y = 1.0;
-        if tile_struct.is_hovered {
-            tile_transform.translation.y = 1.1;
-            if let Some(player_action) = &combat_manager.player_action.clone() {
-                for (mut pos, spell) in &mut spell_casts_query {
-                    if spell == player_action {
-                        pos.translation.x = tile_transform.translation.x;
-                        pos.translation.z = tile_transform.translation.z;
-                        if tile_struct.is_clicked {
-                            combat_manager.reset_buttons = true;
-                            tile_struct.is_clicked = false;
-                            match player_action {
-                                PlayerAction::Movement => {}
-                                PlayerAction::SpellCast(spell) => match spell {
-                                    SpellType::Fireball => {
-                                        for mut enemy in &mut enemies {
-                                            if enemy.hex_coord == tile_struct.coord {
-                                                enemy.health.hp -= 5.0
-                                            }
-                                        }
-                                    }
-                                    _ => {}
-                                },
+                // if let Some(mut cb_maager) = opt_combat_manager {
+                //     cb_maager.turn = Turn::Player(Phase::Action1)
+                // }
+                tiles.for_each(|(material_handle, tile)| {
+                    let mut colour = materials.get_mut(material_handle).unwrap();
+                    if colour.base_color == Color::YELLOW.with_a(0.6) {
+                        if tile.sub_region_id.is_none() {
+                            colour.base_color = Color::rgba(1.0, 1.0, 1.0, 0.6)
+                        } else {
+                            match tile.sub_region_id.as_ref().unwrap().subregion_type {
+                                SubregionType::Other => colour.base_color = Color::WHITE,
+                                _ => {}
                             }
                         }
                     }
-                }
+                })
             }
-        }
-        if tile_struct.is_clicked {
-            tile_transform.translation.y = 1.3;
         }
     }
 }
 
-pub fn update_player_pos(
-    mut tiles: Query<(&mut Transform, &mut Tile), (With<Tile>, Without<Player>)>,
-    mut player_data: Query<&mut Player, With<Player>>,
-    mut player_transform: Query<&mut Transform, With<Player>>,
-    time: Res<Time>,
-    mut combat_manager: ResMut<CombatManager>,
-    mut debug_text_query: Query<&mut Text, With<DebugText>>,
-    mut map_context: ResMut<MapContext>,
-) {
-    let mut debug_text = debug_text_query.single_mut();
+// pub fn update_tile_pos(
+//     mut tiles: Query<(&mut Transform, &mut Tile), (With<Tile>, Without<Player>, Without<PlayerAction>)>,
+//     mut combat_manager: ResMut<CombatManager>,
+//     mut spell_casts_query: Query<(&mut Transform, &PlayerAction), With<PlayerAction>>,
+//     mut enemies: Query<&mut Enemy>,
+// ) {
+//     for (mut tile_transform, mut tile_struct) in &mut tiles {
+//         tile_transform.translation.y = 1.0;
+//         if tile_struct.is_hovered {
+//             tile_transform.translation.y = 1.1;
+//             if let Some(player_action) = &combat_manager.player_action.clone() {
+//                 for (mut pos, spell) in &mut spell_casts_query {
+//                     if spell == player_action {
+//                         pos.translation.x = tile_transform.translation.x;
+//                         pos.translation.z = tile_transform.translation.z;
+//                         if tile_struct.is_clicked {
+//                             combat_manager.reset_buttons = true;
+//                             tile_struct.is_clicked = false;
+//                             match player_action {
+//                                 PlayerAction::Movement => {}
+//                                 PlayerAction::Action(action) => match action {
+//                                     AcitonType::Fireball => {
+//                                         for mut enemy in &mut enemies {
+//                                             if enemy.hex_coord == tile_struct.coord {
+//                                                 enemy.health.hp -= 5.0
+//                                             }
+//                                         }
+//                                     }
+//                                     _ => {}
+//                                 },
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         if tile_struct.is_clicked {
+//             tile_transform.translation.y = 1.3;
+//         }
+//     }
+// }
 
-    // TEMP WORKAROUND DEPRECATE LATER
-    let mut data = player_data.get_single_mut();
-    if data.is_err() {
-        return;
-    }
-    let mut data = data.unwrap();
+// pub fn update_player_pos(
+//     mut tiles: Query<(&mut Transform, &mut Tile), (With<Tile>, Without<Player>)>,
+//     mut player_data: Query<&mut Player, With<Player>>,
+//     mut player_transform: Query<&mut Transform, With<Player>>,
+//     time: Res<Time>,
+//     mut combat_manager: ResMut<CombatManager>,
+//     mut map_context: ResMut<MapContext>,
+// ) {
+//     // TEMP WORKAROUND DEPRECATE LATER
+//     let mut data = player_data.get_single_mut();
+//     if data.is_err() {
+//         return;
+//     }
+//     let mut data = data.unwrap();
 
-    let mut clicked_tiles: Vec<HexCoord> = Vec::new();
-    let mut player_qr = data.hex_coord.clone();
-    let mut end_tile: HexCoord = data.hex_coord.clone();
-    for (_, tile_struct) in &mut tiles {
-        if tile_struct.is_clicked {
-            end_tile = tile_struct.coord;
-            clicked_tiles.push(tile_struct.coord)
-        }
-    }
+//     let mut clicked_tiles: Vec<HexCoord> = Vec::new();
+//     let mut player_qr = data.hex_coord.clone();
+//     let mut end_tile: HexCoord = data.hex_coord.clone();
+//     for (_, tile_struct) in &mut tiles {
+//         if tile_struct.is_clicked {
+//             end_tile = tile_struct.coord;
+//             clicked_tiles.push(tile_struct.coord)
+//         }
+//     }
 
-    for (_, tile) in &tiles {
-        if tile.coord == data.hex_coord {
-            if !combat_manager.in_combat {
-                if let Some(subregion_data) = tile.sub_region_id.clone() {
-                    map_context.change_map(subregion_data.id);
-                    combat_manager.reset_buttons = true;
-                    data.path = Some(Vec::new());
-                }
-            }
-        }
-    }
+//     for (_, tile) in &tiles {
+//         if tile.coord == data.hex_coord {
+//             if !combat_manager.in_combat {
+//                 if let Some(subregion_data) = tile.sub_region_id.clone() {
+//                     map_context.change_map(subregion_data.id);
+//                     combat_manager.reset_buttons = true;
+//                     data.path = Some(Vec::new());
+//                 }
+//             }
+//         }
+//     }
 
-    data.move_timer.tick(time.delta());
-    if data.move_timer.just_finished() {
-        let mut p_pos = player_transform.single_mut();
-        if let Some(player_path) = &mut data.path {
-            if !player_path.is_empty() {
-                p_pos.translation.x =
-                    player_path[0].q as f32 * HORIZONTAL_SPACING + player_path[0].r as f32 % 2.0 * HOR_OFFSET;
-                p_pos.translation.z = player_path[0].r as f32 * VERTICAL_SPACING;
-                player_qr = player_path[0];
-                player_path.remove(0);
-            } else {
-                // pathfinding done
-                for tile_qr in clicked_tiles {
-                    for (_, mut tile_struct) in &mut tiles {
-                        // Unlocks tiles and resets button
-                        combat_manager.reset_buttons = true;
-                        // debug_text.sections[0].value = "reset_buttons is true".to_string();
-                        if !tile_struct.is_obstructed {
-                            tile_struct.can_be_clicked = true;
-                        }
-                        if tile_struct.coord == tile_qr {
-                            tile_struct.is_clicked = false;
-                        }
-                    }
-                }
-                data.path = None
-            }
-        } else if combat_manager.player_action == Some(PlayerAction::Movement) && clicked_tiles.len() == 1 {
-            // TODO: remove the need for samsple_obstructed
-            let sample_obstructed = vec![HexCoord::new(10, 10)];
-            if end_tile != player_qr {
-                let path = astar(player_qr, end_tile, &sample_obstructed);
-                if let Some(some_path) = path {
-                    data.path = Some(some_path);
-                    // Lock clicking on tiles while moving
-                    for (_, mut tile_struct) in &mut tiles {
-                        tile_struct.can_be_clicked = false
-                    }
-                }
-            }
-        }
-    }
-    if player_qr != data.hex_coord {
-        data.hex_coord = player_qr;
-    }
-}
-
-pub fn enemy_ai(
-    // mut tiles: Query<(&mut Transform, &mut Tile), With<Tile>>,
-    mut enemies: Query<(&mut Transform, &mut Enemy)>,
-    player_query: Query<&Player>,
-    mut combat_manager: ResMut<CombatManager>,
-    time: Res<Time>,
-    mut player_health: ResMut<Health>,
-    mut debug_text_query: Query<&mut Text, With<DebugText>>,
-    mut map_context: ResMut<MapContext>,
-) {
-    let mut debug_text = debug_text_query.single_mut();
-
-    // TEMP WORKAROUND DEPRECATE LATER
-    let player = player_query.get_single();
-    if player.is_err() {
-        return;
-    }
-    let player = player.unwrap();
-
-    if combat_manager.turn == Turn::Enemies {
-        // combat_manager.turn = Turn::Player;
-        if !enemies.is_empty() {
-            for (mut enemy_pos, mut enemy_data) in &mut enemies {
-                if enemy_data.path.is_none() {
-                    let sample_obstructed = vec![HexCoord::new(10, 10)];
-                    let e_path = astar(enemy_data.hex_coord, player.hex_coord, &sample_obstructed);
-                    if let Some(e_some_path) = &mut e_path.clone() {
-                        e_some_path.remove(0);
-                        while e_some_path.len() > enemy_data.movement_range as usize {
-                            e_some_path.remove(e_some_path.len() - 1);
-                            // debug_text.sections[0].value = format!("{:#?}", e_some_path.len()).to_string();
-                        }
-                        // println!("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n{:#?} \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", e_some_path);
-                        // e_some_path = *e_some_path[1..enemy_data.movement_range as usize].to_vec();
-                        enemy_data.path = Some(e_some_path.clone());
-                    }
-                }
-                if let Some(e_some_path) = &mut enemy_data.path.clone() {
-                    enemy_data.move_timer.tick(time.delta());
-                    if enemy_data.move_timer.just_finished() {
-                        if hex_distance(&enemy_data.hex_coord, &player.hex_coord) > enemy_data.attack_range {
-                            enemy_data.hex_coord = e_some_path[0];
-                            // debug_text.sections[0].value =
-                            // format!("{:#?} {:#?}", e_some_path[0].q, e_some_path[0].r).to_string();
-                            if !e_some_path.is_empty() {
-                                enemy_pos.translation.x = e_some_path[0].q as f32 * HORIZONTAL_SPACING
-                                    + e_some_path[0].r as f32 % 2.0 * HOR_OFFSET;
-                                enemy_pos.translation.z = e_some_path[0].r as f32 * VERTICAL_SPACING;
-                            };
-                            e_some_path.remove(0);
-                            enemy_data.path = Some(e_some_path.clone());
-                        }
-                        // debug_text.sections[0].value =
-                        //     format!("{}", hex_distance(&enemy_data.hex_coord, &player.hex_coord).to_string());
-                        if hex_distance(&enemy_data.hex_coord, &player.hex_coord) <= enemy_data.attack_range {
-                            player_health.hp -= enemy_data.damage;
-                            combat_manager.turn = Turn::Player;
-                            enemy_data.path = None;
-                        }
-                    }
-                    if e_some_path.len() == 0 {
-                        combat_manager.turn = Turn::Player;
-                        enemy_data.path = None;
-                    }
-                }
-            }
-        } else {
-            combat_manager.in_combat = false;
-            map_context.clear_combat_data();
-            combat_manager.turn = Turn::Player
-        }
-    }
-}
-
-pub fn update_enemy_health(
-    mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    query: Query<(Entity, &Enemy)>,
-) {
-    for (entity, enemy) in query.iter() {
-        if enemy.health.hp <= 0.0 {
-            commands.entity(entity).despawn();
-            continue;
-        }
-        let health_percentage = enemy.health.hp / enemy.health.max_hp;
-        let new_material: Handle<StandardMaterial> =
-            materials.add(Color::rgba(1.0, 0.0, 0.0, health_percentage).into());
-
-        // Replace the old material with the new one
-        commands.entity(entity).insert(new_material);
-    }
-}
+//     data.move_timer.tick(time.delta());
+//     if data.move_timer.just_finished() {
+//         let mut p_pos = player_transform.single_mut();
+//         if let Some(player_path) = &mut data.path {
+//             if !player_path.is_empty() {
+//                 p_pos.translation.x =
+//                     player_path[0].q as f32 * HORIZONTAL_SPACING + player_path[0].r as f32 % 2.0 * HOR_OFFSET;
+//                 p_pos.translation.z = player_path[0].r as f32 * VERTICAL_SPACING;
+//                 player_qr = player_path[0];
+//                 player_path.remove(0);
+//             } else {
+//                 // pathfinding done
+//                 for tile_qr in clicked_tiles {
+//                     for (_, mut tile_struct) in &mut tiles {
+//                         // Unlocks tiles and resets button
+//                         combat_manager.reset_buttons = true;
+//                         if !tile_struct.is_obstructed {
+//                             tile_struct.can_be_clicked = true;
+//                         }
+//                         if tile_struct.coord == tile_qr {
+//                             tile_struct.is_clicked = false;
+//                         }
+//                     }
+//                 }
+//                 data.path = None
+//             }
+//         } else if combat_manager.player_action == Some(PlayerAction::Movement) && clicked_tiles.len() == 1 {
+//             // TODO: remove the need for samsple_obstructed
+//             let sample_obstructed = vec![HexCoord::new(10, 10)];
+//             if end_tile != player_qr {
+//                 let path = astar(player_qr, end_tile, &sample_obstructed);
+//                 if let Some(some_path) = path {
+//                     data.path = Some(some_path);
+//                     // Lock clicking on tiles while moving
+//                     for (_, mut tile_struct) in &mut tiles {
+//                         tile_struct.can_be_clicked = false
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     if player_qr != data.hex_coord {
+//         data.hex_coord = player_qr;
+//     }
+// }

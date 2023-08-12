@@ -59,7 +59,7 @@ pub struct SubregionData {
     pub subregion_type: SubregionType,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Reflect, FromReflect)]
+#[derive(Serialize, Deserialize, Debug, Clone, Reflect, FromReflect, PartialEq)]
 pub enum SubregionType {
     UnclearedCombat,
     ClearedCombat,
@@ -82,12 +82,11 @@ pub fn load_new_map_data(id: String) -> Region {
 pub fn update_world(
     mut commands: Commands,
     mut map_context: ResMut<MapContext>,
-    mut combat_manager: ResMut<CombatManager>,
+    // mut combat_manager: ResMut<CombatManager>,
     tiles_query: Query<Entity, With<Tile>>,
     enemies_query: Query<Entity, With<Enemy>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut debug_text_query: Query<&mut Text, With<DebugText>>,
     mut player_data_query: Query<(&mut Player, &mut Transform)>,
 ) {
     if map_context.load_new_region {
@@ -169,8 +168,10 @@ pub fn update_world(
             ));
         }
         if let Some(enemies) = region.enemies {
-            combat_manager.in_combat = true;
+            commands.insert_resource(CombatManager::new());
             for enemy in enemies {
+                let mut corrected_enemy = enemy;
+                corrected_enemy.move_timer = Timer::from_seconds(0.5, TimerMode::Repeating);
                 commands.spawn((
                     PbrBundle {
                         mesh: meshes.add(Mesh::from(shape::Capsule {
@@ -181,25 +182,18 @@ pub fn update_world(
                         })),
                         material: materials.add(Color::rgb(1.0, 0.5, 0.5).into()),
                         transform: Transform::from_xyz(
-                            HORIZONTAL_SPACING * enemy.hex_coord.q as f32 + enemy.hex_coord.r as f32 % 2.0 * HOR_OFFSET,
+                            HORIZONTAL_SPACING * corrected_enemy.hex_coord.q as f32
+                                + corrected_enemy.hex_coord.r as f32 % 2.0 * HOR_OFFSET,
                             2.5,
-                            VERTICAL_SPACING * enemy.hex_coord.r as f32,
+                            VERTICAL_SPACING * corrected_enemy.hex_coord.r as f32,
                         ),
                         ..default()
                     },
-                    enemy,
+                    corrected_enemy,
                 ));
             }
         } else {
-            combat_manager.in_combat = false
-        }
-        if !debug_text_query.is_empty() {
-            let mut debug_text = debug_text_query.single_mut();
-            debug_text.sections[0].value = format!(
-                "Current world: {}, In combat: {}",
-                map_context.id.clone(),
-                combat_manager.in_combat
-            );
+            commands.remove_resource::<CombatManager>()
         }
     }
 }

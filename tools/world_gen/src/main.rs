@@ -154,8 +154,8 @@ fn main() {
         let mut tile_vec: Vec<Tile> = Vec::new();
         let mut enemy_vec: Vec<Enemy> = Vec::new();
 
-        for q in 0..3 {
-            for r in 0..3 {
+        for q in 0..6 {
+            for r in 0..6 {
                 let mut current_tile = Tile::new(q, r, false, None);
                 if let Some(subregions) = value {
                     for (coord, id) in subregions {

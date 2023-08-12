@@ -30,6 +30,33 @@
             },
             {
                 "coord": {
+                    "q": 0,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
                     "q": 1,
                     "r": 0
                 },
@@ -53,6 +80,33 @@
                 "coord": {
                     "q": 1,
                     "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 5
                 },
                 "is_obstructed": false,
                 "can_be_clicked": false,
@@ -87,6 +141,195 @@
                     "id": "1.2",
                     "subregion_type": "Other"
                 }
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
             }
         ],
         "enemies": null,
@@ -126,6 +369,33 @@
             },
             {
                 "coord": {
+                    "q": 0,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
                     "q": 1,
                     "r": 0
                 },
@@ -153,6 +423,33 @@
             },
             {
                 "coord": {
+                    "q": 1,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
                     "q": 2,
                     "r": 0
                 },
@@ -173,6 +470,195 @@
                 "coord": {
                     "q": 2,
                     "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 5
                 },
                 "is_obstructed": false,
                 "can_be_clicked": false,
@@ -186,7 +672,20 @@
                     "r": 1
                 },
                 "attack_range": 2,
-                "movement_range": 1,
+                "movement_range": 3,
+                "damage": 10.0,
+                "health": {
+                    "max_hp": 10.0,
+                    "hp": 10.0
+                }
+            },
+            {
+                "hex_coord": {
+                    "q": 3,
+                    "r": 1
+                },
+                "attack_range": 2,
+                "movement_range": 3,
                 "damage": 10.0,
                 "health": {
                     "max_hp": 10.0,
@@ -195,8 +694,8 @@
             }
         ],
         "player_spawn_spot": {
-            "q": 5,
-            "r": 5
+            "q": 4,
+            "r": 4
         }
     },
     "1.2": {
@@ -230,6 +729,33 @@
             },
             {
                 "coord": {
+                    "q": 0,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 0,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
                     "q": 1,
                     "r": 0
                 },
@@ -257,6 +783,33 @@
             },
             {
                 "coord": {
+                    "q": 1,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 1,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
                     "q": 2,
                     "r": 0
                 },
@@ -277,6 +830,195 @@
                 "coord": {
                     "q": 2,
                     "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 2,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 3,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 4,
+                    "r": 5
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 0
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 1
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 2
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 3
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 4
+                },
+                "is_obstructed": false,
+                "can_be_clicked": false,
+                "sub_region_id": null
+            },
+            {
+                "coord": {
+                    "q": 5,
+                    "r": 5
                 },
                 "is_obstructed": false,
                 "can_be_clicked": false,
