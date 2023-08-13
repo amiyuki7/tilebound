@@ -18,10 +18,7 @@ impl Plugin for AnimEnginePlugin {
             .add_event::<SpawnEntityEvent>()
             .add_plugin(PanOrbitCameraPlugin)
             .add_system(spawn_rigged_entity.in_set(OnUpdate(GameState::VisibleLoading)))
-            .add_systems((background_animation, key_animation_mock).in_set(OnUpdate(GameState::VisibleLoading)))
-            .add_systems(
-                (spawn_rigged_entity, background_animation, key_animation_mock).in_set(OnUpdate(GameState::InGame)),
-            );
+            .add_systems((spawn_rigged_entity, background_animation).in_set(OnUpdate(GameState::InGame)));
     }
 }
 
