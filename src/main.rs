@@ -57,6 +57,8 @@ fn main() {
         .add_plugin(MenuPlugin)
         .add_plugin(CharacterCreationPlugin)
         .add_plugin(AnimEnginePlugin)
+        .add_plugin(InventoryPlugin)
+        .add_plugin(ChestPlugin)
         .add_plugin(StateInspectorPlugin::<GameState>::default())
         .add_plugin(ResourceInspectorPlugin::<MapContext>::default())
         .add_plugin(ResourceInspectorPlugin::<CombatManager>::default())

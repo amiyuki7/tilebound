@@ -43,6 +43,16 @@ impl MapContext {
         fs::write("world.json", serialised).expect("Unable to write to file");
         self.change_map(prev_id)
     }
+    pub fn remove_chest(&mut self, chest_hex_coord: HexCoord) {
+        let contents = fs::read_to_string("world.json").expect("Something went wrong reading the file");
+        let mut deserialized: HashMap<String, Region> = serde_json::from_str(&contents).unwrap();
+        let curr_region = deserialized.get_mut(&self.id).unwrap();
+        if let Some(ref mut chests) = curr_region.chests {
+            chests.retain(|chest| chest.hex_coord != chest_hex_coord);
+        }
+        let serialised = serde_json::to_string(&deserialized).unwrap();
+        fs::write("world.json", serialised).expect("Unable to write to file");
+    }
 }
 
 #[derive(Serialize, Deserialize, Reflect, Default, Debug)]
@@ -50,6 +60,7 @@ pub struct Region {
     pub tiles: Vec<Tile>,
     pub enemies: Option<Vec<Enemy>>,
     pub player_spawn_spot: HexCoord,
+    pub chests: Option<Vec<Chest>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Reflect, FromReflect)]
@@ -82,9 +93,11 @@ pub fn update_world(
     // mut combat_manager: ResMut<CombatManager>,
     tiles_query: Query<Entity, With<Tile>>,
     enemies_query: Query<Entity, With<Enemy>>,
+    chests_query: Query<Entity, With<Chest>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut player_data_query: Query<(&mut Player, &mut Transform)>,
+    asset_server: Res<AssetServer>,
 ) {
     if map_context.load_new_region {
         map_context.load_new_region = false;
@@ -93,6 +106,9 @@ pub fn update_world(
         }
         for enemy in &enemies_query {
             commands.entity(enemy).despawn_recursive()
+        }
+        for chest in &chests_query {
+            commands.entity(chest).despawn_recursive();
         }
         let region = load_new_map_data(map_context.id.clone());
         let mut data = player_data_query.get_single_mut();
@@ -196,6 +212,24 @@ pub fn update_world(
             }
         } else {
             commands.remove_resource::<CombatManager>()
+        }
+
+        if let Some(chests) = region.chests {
+            for chest in chests {
+                commands
+                    .spawn(SceneBundle {
+                        scene: asset_server.load("chest.glb#Scene0"),
+                        transform: Transform::from_xyz(
+                            chest.hex_coord.q as f32 * HORIZONTAL_SPACING + chest.hex_coord.r as f32 % 2.0 * HOR_OFFSET,
+                            1.0,
+                            // +2.3 is a rough correction value as the chest glb isn't properly centred at x=0, z=0
+                            chest.hex_coord.r as f32 * VERTICAL_SPACING + 2.3,
+                        )
+                        .with_scale(Vec3::splat(0.6)),
+                        ..default()
+                    })
+                    .insert(chest);
+            }
         }
     }
 }
