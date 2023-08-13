@@ -8,7 +8,7 @@ impl Plugin for CombatPlugin {
             .add_systems(
                 (
                     combat_system,
-                    combat_button_system,
+                    combat_button_system.in_set(OnUpdate(UIState::Null)),
                     enemy_ai,
                     update_enemy_health,
                     update_player_health,
