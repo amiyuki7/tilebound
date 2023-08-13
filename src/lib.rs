@@ -58,6 +58,8 @@ pub struct Player {
     pub path: Option<Vec<HexCoord>>,
     pub health: Health,
     pub respawn_point: RespawnPoint,
+    // Used for force ending combat phase if player is out of movement
+    pub remaining_speed: i32,
     #[serde(default, skip)]
     pub move_timer: Timer,
     pub stats: Stats,
@@ -86,6 +88,7 @@ impl Player {
                 world: "1".to_string(),
                 coord: HexCoord::new(0, 0),
             },
+            remaining_speed: stats.0,
             stats: Stats {
                 speed: stats.0,
                 damage: stats.1,
@@ -331,10 +334,11 @@ pub fn move_player_stable(
             if let Some(_) = combat_manager {
                 let mut some_path = path.unwrap();
                 some_path.remove(0);
-                while some_path.len() > p.stats.speed as usize {
+                while some_path.len() > p.remaining_speed as usize {
                     some_path.remove(some_path.len() - 1);
                 }
-                p.path = Some(some_path)
+                p.path = Some(some_path);
+                p.remaining_speed = p.remaining_speed - p.path.as_ref().unwrap().len() as i32;
             } else {
                 p.path = path;
             }

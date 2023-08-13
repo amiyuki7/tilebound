@@ -421,7 +421,8 @@ pub fn enemy_ai(
             }
             if ended_turn {
                 gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
-                combat_manager.turn = Turn::Player(Phase::Movement)
+                combat_manager.turn = Turn::Player(Phase::Movement);
+                player.remaining_speed = player.stats.speed;
             }
         }
     }
