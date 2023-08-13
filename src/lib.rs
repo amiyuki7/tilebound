@@ -297,6 +297,7 @@ pub fn move_player_stable(
     mut map_context: ResMut<MapContext>,
     chests: Query<(Entity, &Chest)>,
     mut chest_open_sender: EventWriter<ChestOpenEvent>,
+    mut combat_manager: Option<ResMut<CombatManager>>,
 ) {
     let (mut p_transform, mut p, mut p_rentity) = player_query.get_single_mut().unwrap();
 
@@ -322,10 +323,21 @@ pub fn move_player_stable(
                 .filter_map(|(_, t)| if t.is_obstructed { Some(t.coord) } else { None })
                 .collect();
 
-            p.path = astar(start_tile, end_tile, &obstructed_tiles);
+            let path = astar(start_tile, end_tile, &obstructed_tiles);
             // TODO: Clarify the None case for the astar func... I think input has been sanitised by now (assert isn't
             // panicking so that's a good sign)
-            assert!(p.path.is_some());
+            assert!(path.is_some());
+
+            if let Some(_) = combat_manager {
+                let mut some_path = path.unwrap();
+                some_path.remove(0);
+                while some_path.len() > p.stats.speed as usize {
+                    some_path.remove(some_path.len() - 1);
+                }
+                p.path = Some(some_path)
+            } else {
+                p.path = path;
+            }
 
             trace!("path len {}", p.path.as_ref().unwrap().len());
 
