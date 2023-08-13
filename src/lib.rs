@@ -89,35 +89,6 @@ impl Health {
 #[derive(Component)]
 pub struct HealthBar;
 
-#[derive(Component, Serialize, Deserialize, Reflect, FromReflect, Clone, Debug)]
-pub struct Enemy {
-    pub hex_coord: HexCoord,
-    pub path: Option<Vec<HexCoord>>,
-    pub attack_range: i32,
-    pub movement_range: i32,
-    pub damage: f32,
-    pub health: Health,
-    #[serde(default, skip)]
-    pub ended_turn: bool,
-    #[serde(default, skip)]
-    pub move_timer: Timer,
-}
-
-impl Enemy {
-    pub fn new(q: i32, r: i32, attack_range: i32, movement_range: i32, damage: f32, hp: f32) -> Enemy {
-        Enemy {
-            hex_coord: HexCoord::new(q, r),
-            path: None,
-            move_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
-            attack_range,
-            movement_range,
-            damage,
-            health: Health::new(hp),
-            ended_turn: false,
-        }
-    }
-}
-
 // #[derive(PartialEq, Component, Clone, Reflect, FromReflect, Debug)]
 // pub enum PlayerAction {
 //     Movement,
@@ -193,11 +164,30 @@ pub fn update_tile_state_stable(
     for (material_handle, mut tile) in &mut tiles {
         let raw_material = materials.get_mut(material_handle).unwrap();
 
-        // if tile.is_hovered {
-        //     raw_material.base_color = Color::BLUE;
-        // } else {
-        //     raw_material.base_color = Color::LIME_GREEN;
-        // }
+        let mut current_colour = Color::rgba(1.0, 1.0, 1.0, 0.6);
+        if tile.is_hovered {
+            current_colour = Color::BLUE;
+        } else if let Some(ref sub_region_data) = tile.sub_region_id {
+            current_colour.set_a(1.0);
+            match sub_region_data.subregion_type {
+                SubregionType::UnclearedCombat => {
+                    // current_colour.set_r();
+                    current_colour.set_g(0.5);
+                    current_colour.set_b(0.5);
+                }
+                SubregionType::ClearedCombat => {
+                    current_colour.set_r(0.5);
+                    // current_colour.set_g(0.5);
+                    current_colour.set_b(0.5);
+                }
+                SubregionType::Other => {}
+            }
+        }
+        if tile.is_obstructed {
+            current_colour = Color::GRAY
+        }
+
+        raw_material.base_color = current_colour;
 
         if tile.is_clicked {
             if let Ok(player) = player.get_single() {
@@ -296,13 +286,15 @@ pub fn move_player_stable(
         let end_tile = tiles.iter_mut().find_map(|(_, mut t)| {
             if t.is_clicked {
                 t.is_clicked = false;
-                Some(t.coord)
+                if !t.is_obstructed {
+                    Some(t.coord)
+                } else {
+                    None
+                }
             } else {
                 None
             }
         });
-        let msg = format!("{:?}", end_tile);
-        debug!(msg);
         if let Some(end_tile) = end_tile {
             let start_tile = p.hex_coord;
 
@@ -324,6 +316,8 @@ pub fn move_player_stable(
                     materials.get_mut(material_handle).unwrap().base_color = Color::YELLOW.with_a(0.6);
                 }
             });
+        } else {
+            gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked))
         }
     }
 

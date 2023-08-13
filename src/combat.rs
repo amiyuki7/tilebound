@@ -19,9 +19,38 @@ impl Plugin for CombatPlugin {
     }
 }
 
+#[derive(Component, Serialize, Deserialize, Reflect, FromReflect, Clone, Debug)]
+pub struct Enemy {
+    pub hex_coord: HexCoord,
+    #[serde(default, skip_serializing)]
+    pub path: Option<Vec<HexCoord>>,
+    pub attack_range: i32,
+    pub movement_range: i32,
+    pub damage: f32,
+    pub health: Health,
+    #[serde(default, skip)]
+    pub ended_turn: bool,
+    #[serde(default, skip)]
+    pub move_timer: Timer,
+}
+
+impl Enemy {
+    pub fn new(q: i32, r: i32, attack_range: i32, movement_range: i32, damage: f32, hp: f32) -> Enemy {
+        Enemy {
+            hex_coord: HexCoord::new(q, r),
+            path: None,
+            move_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
+            attack_range,
+            movement_range,
+            damage,
+            health: Health::new(hp),
+            ended_turn: false,
+        }
+    }
+}
+
 #[derive(Resource, PartialEq, Reflect, Debug)]
 pub struct CombatManager {
-    pub in_combat: bool,
     pub turn: Turn,
     pub player_action: Option<AcitonType>,
     pub reset_buttons: bool,
@@ -30,7 +59,6 @@ pub struct CombatManager {
 impl CombatManager {
     pub fn new() -> CombatManager {
         CombatManager {
-            in_combat: false,
             turn: Turn::Player(Phase::Movement),
             player_action: None,
             reset_buttons: false,
@@ -213,14 +241,12 @@ pub fn update_player_health(
 }
 
 pub fn enemy_ai(
-    // mut tiles: Query<(&mut Transform, &mut Tile), With<Tile>>,
+    tiles: Query<&Tile, With<Tile>>,
     mut enemies: Query<(&mut Transform, &mut Enemy)>,
     mut player_query: Query<&mut Player>,
     mut combat_manager: ResMut<CombatManager>,
     time: Res<Time>,
     mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
-    mut commands: Commands,
-    // mut map_context: ResMut<MapContext>,
 ) {
     // TEMP WORKAROUND DEPRECATE LATER
     let player = player_query.get_single_mut();
@@ -232,13 +258,22 @@ pub fn enemy_ai(
     if combat_manager.turn == Turn::Enemies {
         // combat_manager.turn = Turn::Player;
         if !enemies.is_empty() {
+            let mut obstructed_tiles: Vec<HexCoord> = tiles
+                .iter()
+                .filter_map(|t| if t.is_obstructed { Some(t.coord) } else { None })
+                .collect();
+            obstructed_tiles.push(player.hex_coord);
+            for (_, enemy) in &enemies {
+                obstructed_tiles.push(enemy.hex_coord);
+            }
             for (mut enemy_pos, mut enemy_data) in &mut enemies {
                 if enemy_data.ended_turn {
                     continue;
                 }
                 if enemy_data.path.is_none() {
-                    let sample_obstructed = vec![HexCoord::new(10, 10)];
-                    let e_path = astar(enemy_data.hex_coord, player.hex_coord, &sample_obstructed);
+                    let mut obstructed_without_me = obstructed_tiles.clone();
+                    obstructed_without_me.retain(|&x| x != enemy_data.hex_coord);
+                    let e_path = astar(enemy_data.hex_coord, player.hex_coord, &obstructed_without_me);
                     if let Some(e_some_path) = &mut e_path.clone() {
                         e_some_path.remove(0);
                         while e_some_path.len() > enemy_data.movement_range as usize {
@@ -293,6 +328,7 @@ pub fn update_enemy_health(
     mut materials: ResMut<Assets<StandardMaterial>>,
     enemies: Query<(Entity, &Enemy)>,
     mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
+    mut map_context: ResMut<MapContext>,
 ) {
     for (entity, enemy) in enemies.iter() {
         if enemy.health.hp <= 0.0 {
@@ -308,6 +344,7 @@ pub fn update_enemy_health(
     }
     if enemies.is_empty() {
         gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
+        map_context.clear_combat_data();
         commands.remove_resource::<CombatManager>();
     }
 }

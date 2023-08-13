@@ -26,7 +26,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "Sandbox".into(),
+                        title: "Tilebound".into(),
                         mode: WindowMode::BorderlessFullscreen,
                         resizable: true,
                         ..default()

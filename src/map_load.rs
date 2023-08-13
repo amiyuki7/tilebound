@@ -30,19 +30,18 @@ impl MapContext {
         let contents = fs::read_to_string("world.json").expect("Something went wrong reading the file");
         let mut deserialized: HashMap<String, Region> = serde_json::from_str(&contents).unwrap();
         let split_id = self.id.split(".").collect::<Vec<&str>>();
-        if split_id.len() > 1 {
-            let prev_id = split_id[..split_id.len() - 1].join(".");
-            let previous_region = deserialized.get_mut(&prev_id).unwrap();
-            for tile in &mut previous_region.tiles {
-                if let Some(ref mut sub_data) = tile.sub_region_id {
-                    if sub_data.id == self.id {
-                        tile.sub_region_id = None
-                    }
+        let prev_id = split_id[..split_id.len() - 1].join(".");
+        let previous_region = deserialized.get_mut(&prev_id).unwrap();
+        for tile in &mut previous_region.tiles {
+            if let Some(ref mut sub_data) = tile.sub_region_id {
+                if sub_data.id == self.id {
+                    tile.sub_region_id = None
                 }
             }
         }
         let serialised = serde_json::to_string(&deserialized).unwrap();
         fs::write("world.json", serialised).expect("Unable to write to file");
+        self.change_map(prev_id)
     }
 }
 
@@ -124,6 +123,9 @@ pub fn update_world(
                     SubregionType::Other => {}
                 }
             }
+            if tile.is_obstructed {
+                current_colour = Color::GRAY
+            }
             commands.spawn((
                 PbrBundle {
                     mesh: meshes.add(Mesh::from(shape::RegularPolygon {
@@ -157,8 +159,6 @@ pub fn update_world(
                         for (entity, mut tile) in &mut tiles {
                             if entity == event.target {
                                 tile.is_clicked = true;
-                                let coord = tile.coord;
-                                debug!("{} {}", coord.q, coord.r);
                             }
                         }
 

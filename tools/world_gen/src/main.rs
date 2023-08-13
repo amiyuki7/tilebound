@@ -154,9 +154,13 @@ fn main() {
         let mut tile_vec: Vec<Tile> = Vec::new();
         let mut enemy_vec: Vec<Enemy> = Vec::new();
 
-        for q in 0..6 {
-            for r in 0..6 {
-                let mut current_tile = Tile::new(q, r, false, None);
+        for q in -1..=6 {
+            for r in -1..=6 {
+                let mut obstructed = false;
+                if q == -1 || q == 6 || r == -1 || r == 6 {
+                    obstructed = true
+                }
+                let mut current_tile = Tile::new(q, r, obstructed, None);
                 if let Some(subregions) = value {
                     for (coord, id) in subregions {
                         if (q, r) == *coord {
