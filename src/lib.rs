@@ -8,6 +8,7 @@ use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 
 pub mod animengine;
 pub mod astar;
+pub mod chest;
 pub mod combat;
 pub mod inventory;
 pub mod load;
@@ -16,6 +17,7 @@ pub mod tempui;
 
 pub use animengine::*;
 pub use astar::*;
+pub use chest::*;
 pub use combat::*;
 pub use inventory::*;
 pub use load::*;
@@ -288,6 +290,8 @@ pub fn move_player_stable(
     // mut r_entities: Query<&mut RiggedEntity>,
     time: Res<Time>,
     mut map_context: ResMut<MapContext>,
+    chests: Query<(Entity, &Chest)>,
+    mut chest_open_sender: EventWriter<ChestOpenEvent>,
 ) {
     let (mut p_transform, mut p, mut p_rentity) = player_query.get_single_mut().unwrap();
 
@@ -347,6 +351,40 @@ pub fn move_player_stable(
                 p.path = Some(vec![]);
                 p.reset_move_timer();
                 gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
+            }
+
+            // If the player walks into a chest, terminate pathfind, reset things and send an open chest event
+            for (chest_ent, chest) in &chests {
+                if tile.coord == chest.hex_coord {
+                    info!("Opening a chest at coord q={} r={}", tile.coord.q, tile.coord.r);
+                    p.path = Some(vec![]);
+                    p.reset_move_timer();
+
+                    p_transform.translation.x =
+                        tile.coord.q as f32 * HORIZONTAL_SPACING + tile.coord.r as f32 % 2.0 * HOR_OFFSET;
+                    p_transform.translation.z = tile.coord.r as f32 * VERTICAL_SPACING;
+
+                    tiles.for_each(|(material_handle, tile)| {
+                        let mut colour = materials.get_mut(material_handle).unwrap();
+                        if colour.base_color == Color::YELLOW.with_a(0.6) {
+                            if tile.sub_region_id.is_none() {
+                                colour.base_color = Color::rgba(1.0, 1.0, 1.0, 0.6)
+                            } else {
+                                match tile.sub_region_id.as_ref().unwrap().subregion_type {
+                                    SubregionType::Other => colour.base_color = Color::WHITE,
+                                    _ => {}
+                                }
+                            }
+                        }
+                    });
+
+                    chest_open_sender.send(ChestOpenEvent {
+                        chest_ent,
+                        chest: chest.clone(),
+                    });
+
+                    return;
+                }
             }
         }
 
