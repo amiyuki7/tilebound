@@ -9,6 +9,7 @@ use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 pub mod animengine;
 pub mod astar;
 pub mod combat;
+pub mod inventory;
 pub mod load;
 pub mod map_load;
 pub mod tempui;
@@ -16,6 +17,7 @@ pub mod tempui;
 pub use animengine::*;
 pub use astar::*;
 pub use combat::*;
+pub use inventory::*;
 pub use load::*;
 pub use map_load::*;
 use nanoid::format;
@@ -35,6 +37,14 @@ pub enum GameState {
     VisibleLoading,
     /// Player controls ready
     InGame,
+}
+
+#[derive(States, Reflect, PartialEq, Eq, Debug, Clone, Hash, Default)]
+pub enum UIState {
+    Inventory,
+    OpenChest,
+    #[default]
+    Null,
 }
 
 #[derive(Component, Reflect)]
