@@ -5,7 +5,6 @@ pub struct InventoryPlugin;
 impl Plugin for InventoryPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<UIState>()
-            .insert_resource(Inventory::default())
             .add_system(handle_keys.in_set(OnUpdate(GameState::InGame)));
     }
 }
