@@ -43,6 +43,16 @@ impl MapContext {
         fs::write("world.json", serialised).expect("Unable to write to file");
         self.change_map(prev_id)
     }
+    pub fn remove_chest(&mut self, chest_hex_coord: HexCoord) {
+        let contents = fs::read_to_string("world.json").expect("Something went wrong reading the file");
+        let mut deserialized: HashMap<String, Region> = serde_json::from_str(&contents).unwrap();
+        let curr_region = deserialized.get_mut(&self.id).unwrap();
+        if let Some(ref mut chests) = curr_region.chests {
+            chests.retain(|chest| chest.hex_coord != chest_hex_coord);
+        }
+        let serialised = serde_json::to_string(&deserialized).unwrap();
+        fs::write("world.json", serialised).expect("Unable to write to file");
+    }
 }
 
 #[derive(Serialize, Deserialize, Reflect, Default, Debug)]

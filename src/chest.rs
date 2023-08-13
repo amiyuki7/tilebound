@@ -50,6 +50,7 @@ pub fn on_chest_open(
         assert!(!chest.contents.is_empty(), "Chest must contain at least 1 item");
         assert!(chest.contents.len() <= 5, "Chest can contain at most 5 items");
 
+        map_ctx.remove_chest(chest.hex_coord);
         let mut ui_width = primary_window.single().resolution.width() / 2.0;
         let mut ui_height = ui_width / (1920.0 / 1080.0) / 2.0;
 
@@ -156,6 +157,7 @@ pub fn on_chest_open(
                                                         size: Size::new(Val::Percent(50.0), Val::Percent(20.0)),
                                                         align_items: AlignItems::Center,
                                                         justify_content: JustifyContent::Center,
+                                                        margin: UiRect::top(Val::Percent(4.0)),
                                                         ..default()
                                                     },
                                                     // background_color: Color::BLUE.into(),
