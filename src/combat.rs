@@ -12,6 +12,7 @@ impl Plugin for CombatPlugin {
                     enemy_ai,
                     update_enemy_health,
                     update_player_health,
+                    button_reset_system,
                 )
                     .distributive_run_if(resource_exists::<CombatManager>()),
             )
@@ -48,6 +49,11 @@ impl Enemy {
         }
     }
 }
+#[derive(Reflect, FromReflect, Serialize, Deserialize)]
+pub struct RespawnPoint {
+    pub world: String,
+    pub coord: HexCoord,
+}
 
 #[derive(Resource, PartialEq, Reflect, Debug)]
 pub struct CombatManager {
@@ -82,11 +88,56 @@ pub enum Phase {
 
 pub fn combat_system(
     mut combat_manager: ResMut<CombatManager>,
-    mut tiles: Query<&mut Tile>,
+    mut tiles: Query<(&Handle<StandardMaterial>, &mut Tile)>,
     mut spells: Query<(&mut Transform, &Spell)>,
     mut enemies: Query<&mut Enemy>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
+    player_query: Query<&Player>,
 ) {
-    for mut tile in &mut tiles {
+    // Response to player chosing action
+    let player = player_query.single();
+    'outer: for (tile_mat, tile) in &mut tiles {
+        let mut raw_mat = materials.get_mut(tile_mat).unwrap();
+        if player.path.is_none() {
+            if !tile.is_obstructed {
+                raw_mat.base_color = Color::rgba(1.0, 1.0, 1.0, 0.6);
+            }
+            if tile.is_hovered {
+                for enemy in &enemies {
+                    if enemy.hex_coord == tile.coord {
+                        continue 'outer;
+                    }
+                }
+                raw_mat.base_color = Color::BLUE;
+            }
+        }
+    }
+    if let Some(player_action) = combat_manager.player_action {
+        match player_action {
+            AcitonType::Fireball => {
+                for (tile_mat, tile) in &mut tiles {
+                    let mut raw_mat = materials.get_mut(tile_mat).unwrap();
+                    if !tile.is_obstructed {
+                        raw_mat.base_color = Color::LIME_GREEN;
+                    }
+                }
+            }
+            AcitonType::Smack => {
+                let adjactent = get_neighbors(&player.hex_coord);
+                for (tile_mat, tile) in &mut tiles {
+                    let mut raw_mat = materials.get_mut(tile_mat).unwrap();
+                    if !tile.is_obstructed && adjactent.contains(&tile.coord) {
+                        raw_mat.base_color = Color::LIME_GREEN;
+                    }
+                }
+            }
+            _ => {}
+        }
+    } else {
+    }
+    // Execute action
+    'outer: for (_, mut tile) in &mut tiles {
         if tile.is_clicked {
             if let Some(player_action) = combat_manager.player_action {
                 tile.is_clicked = false;
@@ -99,9 +150,17 @@ pub fn combat_system(
                                 pos.translation.z = tile.coord.r as f32 * VERTICAL_SPACING;
                                 for mut enemy in &mut enemies {
                                     if enemy.hex_coord == tile.coord {
-                                        enemy.health.hp -= 10.0
+                                        enemy.health.hp -= 10.0 * player.stats.damage as f32
                                     }
                                 }
+                            }
+                        }
+                    }
+                    AcitonType::Smack => {
+                        for mut enemy in &mut enemies {
+                            if enemy.hex_coord == tile.coord {
+                                combat_manager.reset_buttons = true;
+                                enemy.health.hp -= (player.stats.damage * 2) as f32
                             }
                         }
                     }
@@ -117,22 +176,32 @@ pub fn combat_system(
                     }
                 }
             }
+            if combat_manager.turn == Turn::Player(Phase::Movement) {
+                for enemy in &enemies {
+                    if enemy.hex_coord == tile.coord {
+                        tile.is_clicked = false;
+                        continue 'outer;
+                    }
+                }
+                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::LockedByMovement));
+            }
         }
     }
-    // _ => {
-    //     let spells = opt_spells.as_mut().unwrap();
-    //     match combat_manager.player_action.unwrap() {
-    //         AcitonType::Fireball => {
-    //             for (mut pos, spell) in spells {
-    //                 if *spell == Spell::Fireball {
-    //
-    //                 }
-    //             }
-    //         }
-    //         AcitonType::Placeholder2 => {}
-    //         _ => {}
-    //     }
-    // }
+}
+
+pub fn button_reset_system(
+    mut combat_manager: ResMut<CombatManager>,
+    mut buttons: Query<(&mut BackgroundColor, Option<&mut ToggleButton>), With<ToggleButton>>,
+) {
+    if combat_manager.reset_buttons == true {
+        combat_manager.reset_buttons = false;
+        for (mut bg_colour, opt_toggle) in &mut buttons {
+            *bg_colour = NORMAL_BUTTON.into();
+            if let Some(mut toggle) = opt_toggle {
+                toggle.is_on = false;
+            }
+        }
+    }
 }
 
 pub fn combat_button_system(
@@ -142,7 +211,7 @@ pub fn combat_button_system(
             &mut BackgroundColor,
             &Children,
             &ButtonType,
-            &mut ToggleButton,
+            Option<&mut ToggleButton>,
         ),
         (Changed<Interaction>, With<Button>),
     >,
@@ -153,18 +222,18 @@ pub fn combat_button_system(
     // other_text_queery: Query<&ButtonText>,
     // mut tile_queery: Query<&mut Tile>,
 ) {
-    for (interaction, mut color, _children, button_type, mut _toggle_state) in &mut interaction_query {
+    for (interaction, mut color, _children, button_type, mut toggle_state) in &mut interaction_query {
         // let msg = format!("{:#?}", button_type);
         // trace!(msg);
         if let Turn::Player(ref mut phase) = combat_manager.turn.clone() {
             if let ButtonType::CombatButton(cb_type) = *button_type {
                 match interaction {
                     Interaction::Clicked => {
-                        *color = PRESSED_BUTTON.into();
                         match cb_type {
                             CombatButtonType::Movement => {}
                             CombatButtonType::Action(action) => match action {
                                 AcitonType::EndPhase => {
+                                    *color = PRESSED_BUTTON.into();
                                     match phase {
                                         Phase::Movement => {
                                             combat_manager.turn = Turn::Player(Phase::Action1);
@@ -185,39 +254,63 @@ pub fn combat_button_system(
                                             //
                                         }
                                     }
-
-                                    trace!("movement completed, {:?} starting", combat_manager.turn)
                                 }
                                 AcitonType::Fireball => {
                                     if combat_manager.turn == Turn::Player(Phase::Action1)
                                         || combat_manager.turn == Turn::Player(Phase::Action2)
                                     {
-                                        combat_manager.player_action = Some(AcitonType::Fireball);
-                                        gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked))
+                                        if let Some(mut toggle) = toggle_state {
+                                            toggle.is_on = !toggle.is_on;
+                                            if toggle.is_on {
+                                                *color = PRESSED_BUTTON.into();
+                                                combat_manager.player_action = Some(AcitonType::Fireball);
+                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked))
+                                            } else {
+                                                *color = HOVERED_BUTTON.into();
+                                                combat_manager.player_action = None;
+                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Locked))
+                                            }
+                                        }
                                     }
                                 }
-                                AcitonType::Placeholder2 => {}
+                                AcitonType::Smack => {
+                                    if combat_manager.turn == Turn::Player(Phase::Action1)
+                                        || combat_manager.turn == Turn::Player(Phase::Action2)
+                                    {
+                                        if let Some(mut toggle) = toggle_state {
+                                            toggle.is_on = !toggle.is_on;
+                                            if toggle.is_on {
+                                                *color = PRESSED_BUTTON.into();
+                                                combat_manager.player_action = Some(AcitonType::Smack);
+                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
+                                            } else {
+                                                *color = HOVERED_BUTTON.into();
+                                                combat_manager.player_action = None;
+                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Locked))
+                                            }
+                                        }
+                                    }
+                                }
                             },
                         }
                     }
                     Interaction::Hovered => {
-                        *color = HOVERED_BUTTON.into()
-                        // Something else
+                        if let Some(toggle) = toggle_state {
+                            if !toggle.is_on {
+                                *color = HOVERED_BUTTON.into();
+                            }
+                        } else {
+                            *color = HOVERED_BUTTON.into();
+                        }
                     }
                     Interaction::None => {
-                        *color = NORMAL_BUTTON.into()
-                        // Something else
-                    }
-                }
-                match phase {
-                    Phase::Movement => {
-                        // Something else
-                    }
-                    Phase::Action1 => {
-                        // Something else
-                    }
-                    Phase::Action2 => {
-                        // Something else
+                        if let Some(toggle) = toggle_state {
+                            if !toggle.is_on {
+                                *color = NORMAL_BUTTON.into();
+                            }
+                        } else {
+                            *color = NORMAL_BUTTON.into();
+                        }
                     }
                 }
             }
@@ -226,10 +319,12 @@ pub fn combat_button_system(
 }
 
 pub fn update_player_health(
-    mut player_query: Query<&mut Player>,
+    mut player_query: Query<(&mut Player, &mut Transform)>,
     mut health_bar_query: Query<&mut Style, With<HealthBar>>,
+    mut map_context: ResMut<MapContext>,
+    mut commands: Commands,
 ) {
-    let player = player_query.single_mut();
+    let (mut player, mut p_transform) = player_query.single_mut();
     // text.sections[0].value = format!("{}", health.hp);
     // Update the components of the collected entities
     for mut style in &mut health_bar_query {
@@ -237,6 +332,15 @@ pub fn update_player_health(
             Val::Percent((player.health.hp / player.health.max_hp) * 100.0),
             Val::Percent(100.0),
         );
+    }
+    if player.health.hp <= 0.0 {
+        commands.remove_resource::<CombatManager>();
+        map_context.change_map(player.respawn_point.world.clone());
+        player.health.hp = player.health.max_hp;
+        player.hex_coord = player.respawn_point.coord;
+        p_transform.translation.x =
+            player.hex_coord.q as f32 * HORIZONTAL_SPACING + player.hex_coord.r as f32 % 2.0 * HOR_OFFSET;
+        p_transform.translation.z = player.hex_coord.r as f32 * VERTICAL_SPACING;
     }
 }
 
@@ -395,7 +499,6 @@ pub fn add_combat_stuff(
         .insert(CombatObject)
         .with_children(|parent| {
             let fireball_icon = asset_server.load("2D/Fireball.png");
-            // let movement_icon = asset_server.load("2D/Running.png");
             parent
                 .spawn(ButtonBundle {
                     style: Style {
@@ -431,6 +534,44 @@ pub fn add_combat_stuff(
                         .insert(ButtonText {
                             active_text: "Casting".to_string(),
                             passive_text: "Fireball".to_string(),
+                        });
+                });
+            let smack_icon = asset_server.load("2D/Smack.png");
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        size: Size::height(Val::Percent(100.0)),
+                        // horizontally center child text
+                        justify_content: JustifyContent::Center,
+                        // vertically center child text
+                        align_items: AlignItems::Center,
+                        position_type: PositionType::Absolute,
+                        position: UiRect {
+                            right: Val::Px(100.0),
+                            top: Val::Px(0.0),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    background_color: NORMAL_BUTTON.into(),
+                    image: UiImage::new(smack_icon),
+                    ..default()
+                })
+                .insert(ButtonType::CombatButton(CombatButtonType::Action(AcitonType::Smack)))
+                .insert(ToggleButton::new())
+                .with_children(|parent| {
+                    parent
+                        .spawn(TextBundle::from_section(
+                            "Smack",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 40.0,
+                                color: Color::rgb(0.9, 0.9, 0.9),
+                            },
+                        ))
+                        .insert(ButtonText {
+                            active_text: "Smacking".to_string(),
+                            passive_text: "Smack".to_string(),
                         });
                 });
             // parent
@@ -490,7 +631,6 @@ pub fn add_combat_stuff(
                     ..default()
                 })
                 .insert(ButtonType::CombatButton(CombatButtonType::Action(AcitonType::EndPhase)))
-                .insert(ToggleButton::new())
                 .with_children(|parent| {
                     parent
                         .spawn(TextBundle::from_section(
@@ -519,6 +659,7 @@ pub fn add_combat_stuff(
             background_color: Color::GRAY.into(),
             ..Default::default()
         })
+        .insert(CombatObject)
         .with_children(|parent| {
             parent
                 .spawn(NodeBundle {

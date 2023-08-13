@@ -8,6 +8,7 @@ use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 
 pub mod animengine;
 pub mod astar;
+pub mod character_creation;
 pub mod combat;
 pub mod load;
 pub mod map_load;
@@ -15,10 +16,10 @@ pub mod tempui;
 
 pub use animengine::*;
 pub use astar::*;
+pub use character_creation::*;
 pub use combat::*;
 pub use load::*;
 pub use map_load::*;
-use nanoid::format;
 use serde::{Deserialize, Serialize};
 pub use tempui::*;
 
@@ -30,6 +31,8 @@ pub enum GameState {
     /// Do extra setup such as determining animation clip durations
     LoadingPhaseTwo,
     Menu,
+    // Only happens if a new game is begun
+    CharacterCreation,
     /// TODO: Work with VisibleLoading state after LoadingPhaseTwo
     /// Spawning and parent/child hierarchy setup for entities and cameras
     VisibleLoading,
@@ -37,12 +40,15 @@ pub enum GameState {
     InGame,
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Serialize, Deserialize)]
 pub struct Player {
     pub hex_coord: HexCoord,
     pub path: Option<Vec<HexCoord>>,
-    pub move_timer: Timer,
     pub health: Health,
+    pub respawn_point: RespawnPoint,
+    #[serde(default, skip)]
+    pub move_timer: Timer,
+    pub stats: Stats,
 }
 
 impl Player {
@@ -53,7 +59,7 @@ impl Player {
     ///     let run_dur = re_map.0.get(&REntityType::Kraug).unwrap().animations[9].duration;
     /// }
     /// ```
-    pub fn new(q: i32, r: i32, move_timer_duration: f32) -> Player {
+    pub fn new(q: i32, r: i32, move_timer_duration: f32, stats: (i32, i32, i32)) -> Player {
         // Set it close to the just finished amount so we can snap straight into animations during movement
         let mut timer = Timer::from_seconds(move_timer_duration, TimerMode::Repeating);
         timer.set_elapsed(::std::time::Duration::from_secs_f32(move_timer_duration - 0.05));
@@ -63,7 +69,16 @@ impl Player {
             path: None,
             // move_timer: Timer::from_seconds(move_timer_duration, TimerMode::Repeating),
             move_timer: timer,
-            health: Health::new(100.0),
+            health: Health::new(((stats.2 + 5) * 10) as f32),
+            respawn_point: RespawnPoint {
+                world: "1".to_string(),
+                coord: HexCoord::new(0, 0),
+            },
+            stats: Stats {
+                speed: stats.0,
+                damage: stats.1,
+                health: stats.2,
+            },
         }
     }
 
@@ -157,10 +172,12 @@ pub fn update_tile_state_stable(
     mut tiles: Query<(&Handle<StandardMaterial>, &mut Tile)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
-    mut opt_combat_manager: Option<ResMut<CombatManager>>,
-    // mut opt_spells: Option<Query<(&mut Transform, &Spell)>>,
+    opt_combat_manager: Option<Res<CombatManager>>,
     player: Query<&Player>,
 ) {
+    if opt_combat_manager.is_some() {
+        return;
+    }
     for (material_handle, mut tile) in &mut tiles {
         let raw_material = materials.get_mut(material_handle).unwrap();
 
@@ -195,19 +212,7 @@ pub fn update_tile_state_stable(
                     tile.is_clicked = false;
                     // TODO: Pressed your own tile - inventory?
                 } else {
-                    if let Some(ref mut combat_manager) = opt_combat_manager {
-                        if let Turn::Player(ref phase) = combat_manager.turn {
-                            match phase {
-                                Phase::Movement => {
-                                    debug!("Movement phase");
-                                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::LockedByMovement))
-                                }
-                                _ => {}
-                            }
-                        }
-                    } else {
-                        gi_lock_sender.send(GlobalInteractionLockEvent(GIState::LockedByMovement));
-                    }
+                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::LockedByMovement));
                 }
             }
         }

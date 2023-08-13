@@ -142,7 +142,7 @@ pub fn astar(start: HexCoord, goal: HexCoord, obstructed_tiles: &Vec<HexCoord>) 
     None
 }
 
-fn get_neighbors(coord: &HexCoord) -> Vec<HexCoord> {
+pub fn get_neighbors(coord: &HexCoord) -> Vec<HexCoord> {
     let q = coord.q;
     let r = coord.r;
 

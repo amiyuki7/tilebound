@@ -4,6 +4,7 @@ use crate::*;
 
 use std::collections::hash_map::DefaultHasher;
 use std::f32::consts::PI;
+use std::fs;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
@@ -74,7 +75,7 @@ pub fn spawn_rigged_entity(
 ) {
     for event in spawn_entity_event.iter() {
         let is_player = event.is_player;
-        let mut hasher = DefaultHasher::new();
+        let mut hasher: DefaultHasher = DefaultHasher::new();
 
         let spawned_entity = match event.entity_type {
             REntityType::Kraug => {
@@ -141,10 +142,25 @@ pub fn spawn_rigged_entity(
                 .insert(PlayerCameraMarker)
                 .id();
 
+            // load in player data
+            let player_data = fs::read_to_string("player_data.json")
+                .expect("this error shouldn't happen, failed reading player_data.json");
+            let deserialized_result: Result<Player, _> = serde_json::from_str(&player_data);
+            let mut deserialised: Player;
+            if let Ok(deserial) = deserialized_result {
+                deserialised = deserial
+            } else {
+                let default_data = fs::read_to_string("default_player_data.json")
+                    .expect("this error shouldn't occur. Failed reading default_player_data.json");
+                deserialised = serde_json::from_str(&default_data).unwrap();
+                fs::write("player_data.json", default_data)
+                    .expect("It is very difficult for this error to occur. Stop messing with the code");
+            }
             commands.entity(spawned_entity).insert(Player::new(
-                0,
-                0,
+                deserialised.respawn_point.coord.q,
+                deserialised.respawn_point.coord.r,
                 re_map.0.get(&event.entity_type).unwrap().animations[9].duration,
+                deserialised.stats.to_tupple(),
             ));
         }
     }

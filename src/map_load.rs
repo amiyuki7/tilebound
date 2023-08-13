@@ -67,8 +67,6 @@ pub enum SubregionType {
 
 pub fn reset_world() {
     debug!("Reset the World!");
-    let default_world = fs::read_to_string("default_world.json").expect("Something went wrong reading the file");
-    fs::write("world.json", default_world).expect("Unable to write to file");
 }
 
 pub fn load_new_map_data(id: String) -> Region {
@@ -91,10 +89,10 @@ pub fn update_world(
     if map_context.load_new_region {
         map_context.load_new_region = false;
         for tile in &tiles_query {
-            commands.entity(tile).despawn()
+            commands.entity(tile).despawn_recursive()
         }
         for enemy in &enemies_query {
-            commands.entity(enemy).despawn()
+            commands.entity(enemy).despawn_recursive()
         }
         let region = load_new_map_data(map_context.id.clone());
         let mut data = player_data_query.get_single_mut();
@@ -145,7 +143,11 @@ pub fn update_world(
                 tile,
                 PickableBundle::default(),
                 RaycastPickTarget::default(),
-                OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
+                OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| {
+                    if !tile.is_obstructed {
+                        tile.is_hovered = true
+                    }
+                }),
                 OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
                 OnPointer::<Click>::run_callback(
                     |In(event): In<ListenedEvent<Click>>,

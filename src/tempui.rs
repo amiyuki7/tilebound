@@ -1,5 +1,5 @@
 use crate::*;
-
+use std::fs;
 pub struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
@@ -17,7 +17,10 @@ struct MenuCameraMarker;
 struct MenuUIRootMarker;
 
 #[derive(Component)]
-struct PlayButtonMarker;
+enum MainMenuButton {
+    New,
+    Load,
+}
 
 fn draw_menu_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((Camera2dBundle::default(), Name::new("menu_camera"), MenuCameraMarker));
@@ -51,14 +54,45 @@ fn draw_menu_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     focus_policy: bevy::ui::FocusPolicy::Block,
                     ..default()
                 })
-                .insert(Name::new("play button"))
-                .insert(PlayButtonMarker)
+                .insert(Name::new("new game button"))
+                .insert(MainMenuButton::New)
                 .with_children(|parent| {
                     parent
                         // Text
                         .spawn(TextBundle {
                             text: Text::from_section(
-                                "Play!",
+                                "New Game",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: 40.0,
+                                    color: Color::WHITE,
+                                },
+                            ),
+                            ..default()
+                        });
+                });
+            parent
+                // Button
+                .spawn(ButtonBundle {
+                    style: Style {
+                        size: Size::new(Val::Percent(20.0), Val::Percent(10.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    background_color: Color::rgb(0.0, 0.6, 0.1).into(),
+                    // Always set FocusPolicy::Block on buttons otherwise you get occasional displacement bugs
+                    focus_policy: bevy::ui::FocusPolicy::Block,
+                    ..default()
+                })
+                .insert(Name::new("load save button"))
+                .insert(MainMenuButton::Load)
+                .with_children(|parent| {
+                    parent
+                        // Text
+                        .spawn(TextBundle {
+                            text: Text::from_section(
+                                "Load Save",
                                 TextStyle {
                                     font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                     font_size: 40.0,
@@ -73,14 +107,26 @@ fn draw_menu_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 #[allow(clippy::type_complexity)]
 fn play_button_interaction(
-    mut interaction_query: Query<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<PlayButtonMarker>)>,
+    mut interaction_query: Query<(&Interaction, &mut BackgroundColor, &MainMenuButton), Changed<Interaction>>,
     mut next_game_state: ResMut<NextState<GameState>>,
 ) {
-    for (interaction, mut background_color) in &mut interaction_query {
+    for (interaction, mut background_color, button_type) in &mut interaction_query {
         match interaction {
-            Interaction::Clicked => {
-                next_game_state.set(GameState::VisibleLoading);
-            }
+            Interaction::Clicked => match button_type {
+                MainMenuButton::New => {
+                    let default_world =
+                        fs::read_to_string("default_world.json").expect("Something went wrong reading the file");
+                    fs::write("world.json", default_world).expect("Unable to write to file");
+                    debug!("Reset the World");
+                    let default_player =
+                        fs::read_to_string("default_player_data.json").expect("Something went wrong reading the file");
+                    fs::write("player_data.json", default_player).expect("Unable to write to file");
+                    next_game_state.set(GameState::CharacterCreation);
+                }
+                MainMenuButton::Load => {
+                    next_game_state.set(GameState::VisibleLoading);
+                }
+            },
             Interaction::Hovered => *background_color = Color::rgb(0.0, 1.0, 0.0).into(),
             Interaction::None => *background_color = Color::rgb(0.0, 0.8, 0.2).into(),
         }
@@ -118,9 +164,9 @@ pub enum NonCombatButtonType {
 }
 #[derive(Clone, Copy, PartialEq, FromReflect, Reflect, Debug)]
 pub enum AcitonType {
-    Fireball,
     EndPhase,
-    Placeholder2,
+    Fireball,
+    Smack,
 }
 
 #[derive(Component)]
