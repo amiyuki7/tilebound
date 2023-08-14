@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::f32::consts::PI;
+use std::fs;
 
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::RaycastPickCamera;
@@ -428,9 +429,14 @@ pub fn move_player_stable(
                 p.path = None;
                 p.reset_move_timer();
                 gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
-                // if let Some(mut cb_maager) = opt_combat_manager {
-                //     cb_maager.turn = Turn::Player(Phase::Action1)
-                // }
+                if combat_manager.is_none() {
+                    p.respawn_point.coord = p.hex_coord;
+                    p.respawn_point.world = map_context.id.clone();
+                    // let player_serialise_struct: Player = p.into();
+                    let player_data = serde_json::to_string(&*p).unwrap();
+                    fs::write("player_data.json", player_data)
+                        .expect("It is very difficult for this error to occur. Stop messing with the code");
+                }
                 tiles.for_each(|(material_handle, tile)| {
                     let mut colour = materials.get_mut(material_handle).unwrap();
                     if colour.base_color == Color::YELLOW.with_a(0.6) {

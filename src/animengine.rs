@@ -153,11 +153,18 @@ pub fn spawn_rigged_entity(
                 fs::write("player_data.json", default_data)
                     .expect("It is very difficult for this error to occur. Stop messing with the code");
             }
+            debug!("Here");
             commands.entity(spawned_entity).insert(Player::new(
                 deserialised.respawn_point.coord.q,
                 deserialised.respawn_point.coord.r,
                 re_map.0.get(&event.entity_type).unwrap().animations[9].duration,
                 deserialised.stats.to_tupple(),
+            ));
+            commands.entity(spawned_entity).insert(Transform::from_xyz(
+                deserialised.hex_coord.q as f32 * HORIZONTAL_SPACING
+                    + deserialised.hex_coord.r as f32 % 2.0 * HOR_OFFSET,
+                1.0,
+                deserialised.hex_coord.r as f32 * VERTICAL_SPACING,
             ));
         }
     }
