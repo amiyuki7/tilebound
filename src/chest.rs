@@ -36,6 +36,7 @@ pub fn on_chest_open(
     mut player: Query<&mut Player>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
+    mut inventory: ResMut<Inventory>,
 ) {
     for event in &mut chest_open_event {
         next_ui_state.set(UIState::OpenChest);
@@ -51,6 +52,11 @@ pub fn on_chest_open(
         assert!(chest.contents.len() <= 5, "Chest can contain at most 5 items");
 
         map_ctx.remove_chest(chest.hex_coord);
+
+        for (id, qty) in &chest.contents {
+            inventory.add_item(*id, *qty);
+        }
+
         let mut ui_width = primary_window.single().resolution.width() / 2.0;
         let mut ui_height = ui_width / (1920.0 / 1080.0) / 2.0;
 
