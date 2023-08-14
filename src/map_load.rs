@@ -30,16 +30,25 @@ impl MapContext {
         let contents = fs::read_to_string("world.json").expect("Something went wrong reading the file");
         let mut deserialized: HashMap<String, Region> = serde_json::from_str(&contents).unwrap();
         let split_id = self.id.split(".").collect::<Vec<&str>>();
-        if split_id.len() > 1 {
-            let prev_id = split_id[..split_id.len() - 1].join(".");
-            let previous_region = deserialized.get_mut(&prev_id).unwrap();
-            for tile in &mut previous_region.tiles {
-                if let Some(ref mut sub_data) = tile.sub_region_id {
-                    if sub_data.id == self.id {
-                        tile.sub_region_id = None
-                    }
+        let prev_id = split_id[..split_id.len() - 1].join(".");
+        let previous_region = deserialized.get_mut(&prev_id).unwrap();
+        for tile in &mut previous_region.tiles {
+            if let Some(ref mut sub_data) = tile.sub_region_id {
+                if sub_data.id == self.id {
+                    tile.sub_region_id = None
                 }
             }
+        }
+        let serialised = serde_json::to_string(&deserialized).unwrap();
+        fs::write("world.json", serialised).expect("Unable to write to file");
+        self.change_map(prev_id)
+    }
+    pub fn remove_chest(&mut self, chest_hex_coord: HexCoord) {
+        let contents = fs::read_to_string("world.json").expect("Something went wrong reading the file");
+        let mut deserialized: HashMap<String, Region> = serde_json::from_str(&contents).unwrap();
+        let curr_region = deserialized.get_mut(&self.id).unwrap();
+        if let Some(ref mut chests) = curr_region.chests {
+            chests.retain(|chest| chest.hex_coord != chest_hex_coord);
         }
         let serialised = serde_json::to_string(&deserialized).unwrap();
         fs::write("world.json", serialised).expect("Unable to write to file");
@@ -50,6 +59,8 @@ impl MapContext {
 pub struct Region {
     pub tiles: Vec<Tile>,
     pub enemies: Option<Vec<Enemy>>,
+    pub player_spawn_spot: HexCoord,
+    pub chests: Option<Vec<Chest>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Reflect, FromReflect)]
@@ -58,7 +69,7 @@ pub struct SubregionData {
     pub subregion_type: SubregionType,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Reflect, FromReflect)]
+#[derive(Serialize, Deserialize, Debug, Clone, Reflect, FromReflect, PartialEq)]
 pub enum SubregionType {
     UnclearedCombat,
     ClearedCombat,
@@ -66,8 +77,7 @@ pub enum SubregionType {
 }
 
 pub fn reset_world() {
-    let default_world = fs::read_to_string("default_world.json").expect("Something went wrong reading the file");
-    fs::write("world.json", default_world).expect("Unable to write to file");
+    debug!("Reset the World!");
 }
 
 pub fn load_new_map_data(id: String) -> Region {
@@ -80,22 +90,35 @@ pub fn load_new_map_data(id: String) -> Region {
 pub fn update_world(
     mut commands: Commands,
     mut map_context: ResMut<MapContext>,
-    mut combat_manager: ResMut<CombatManager>,
+    // mut combat_manager: ResMut<CombatManager>,
     tiles_query: Query<Entity, With<Tile>>,
     enemies_query: Query<Entity, With<Enemy>>,
+    chests_query: Query<Entity, With<Chest>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut debug_text_query: Query<&mut Text, With<DebugText>>,
+    mut player_data_query: Query<(&mut Player, &mut Transform)>,
+    asset_server: Res<AssetServer>,
 ) {
     if map_context.load_new_region {
         map_context.load_new_region = false;
         for tile in &tiles_query {
-            commands.entity(tile).despawn()
+            commands.entity(tile).despawn_recursive()
         }
         for enemy in &enemies_query {
-            commands.entity(enemy).despawn()
+            commands.entity(enemy).despawn_recursive()
+        }
+        for chest in &chests_query {
+            commands.entity(chest).despawn_recursive();
         }
         let region = load_new_map_data(map_context.id.clone());
+        let mut data = player_data_query.get_single_mut();
+        if let Ok((mut player_data, mut player_transform)) = data {
+            player_data.hex_coord = region.player_spawn_spot;
+            player_transform.translation.x = region.player_spawn_spot.q as f32 * HORIZONTAL_SPACING
+                + region.player_spawn_spot.r as f32 % 2.0 * HOR_OFFSET;
+            player_transform.translation.z = region.player_spawn_spot.r as f32 * VERTICAL_SPACING;
+        }
+
         for tile in region.tiles {
             let mut current_colour = Color::rgba(1.0, 1.0, 1.0, 0.6);
             if let Some(ref sub_region_data) = tile.sub_region_id {
@@ -113,6 +136,9 @@ pub fn update_world(
                     }
                     SubregionType::Other => {}
                 }
+            }
+            if tile.is_obstructed {
+                current_colour = Color::GRAY
             }
             commands.spawn((
                 PbrBundle {
@@ -133,22 +159,38 @@ pub fn update_world(
                 tile,
                 PickableBundle::default(),
                 RaycastPickTarget::default(),
-                OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = true),
-                OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
-                OnPointer::<Click>::target_component_mut::<Tile>(|_, tile| {
-                    if tile.can_be_clicked {
-                        if tile.is_clicked {
-                            tile.is_clicked = false
-                        } else {
-                            tile.is_clicked = true
-                        }
+                OnPointer::<Over>::target_component_mut::<Tile>(|_, tile| {
+                    if !tile.is_obstructed {
+                        tile.is_hovered = true
                     }
                 }),
+                OnPointer::<Out>::target_component_mut::<Tile>(|_, tile| tile.is_hovered = false),
+                OnPointer::<Click>::run_callback(
+                    |In(event): In<ListenedEvent<Click>>,
+                     mut tiles: Query<(Entity, &mut Tile)>,
+                     gi_state: Res<State<GIState>>,
+                     ui_state: Res<State<UIState>>| {
+                        // Clicking should only be allowed during GIState::Unlocked and during UIState::Inventory
+                        if gi_state.0 == GIState::Locked || ui_state.0 == UIState::Inventory {
+                            return Bubble::Up;
+                        }
+
+                        for (entity, mut tile) in &mut tiles {
+                            if entity == event.target && event.button == PointerButton::Primary {
+                                tile.is_clicked = true;
+                            }
+                        }
+
+                        Bubble::Up
+                    },
+                ),
             ));
         }
         if let Some(enemies) = region.enemies {
-            combat_manager.in_combat = true;
+            commands.insert_resource(CombatManager::new());
             for enemy in enemies {
+                let mut corrected_enemy = enemy;
+                corrected_enemy.move_timer = Timer::from_seconds(0.5, TimerMode::Repeating);
                 commands.spawn((
                     PbrBundle {
                         mesh: meshes.add(Mesh::from(shape::Capsule {
@@ -159,25 +201,36 @@ pub fn update_world(
                         })),
                         material: materials.add(Color::rgb(1.0, 0.5, 0.5).into()),
                         transform: Transform::from_xyz(
-                            HORIZONTAL_SPACING * enemy.hex_coord.q as f32 + enemy.hex_coord.r as f32 % 2.0 * HOR_OFFSET,
+                            HORIZONTAL_SPACING * corrected_enemy.hex_coord.q as f32
+                                + corrected_enemy.hex_coord.r as f32 % 2.0 * HOR_OFFSET,
                             2.5,
-                            VERTICAL_SPACING * enemy.hex_coord.r as f32,
+                            VERTICAL_SPACING * corrected_enemy.hex_coord.r as f32,
                         ),
                         ..default()
                     },
-                    enemy,
+                    corrected_enemy,
                 ));
             }
         } else {
-            combat_manager.in_combat = false
+            commands.remove_resource::<CombatManager>()
         }
-        if !debug_text_query.is_empty() {
-            let mut debug_text = debug_text_query.single_mut();
-            debug_text.sections[0].value = format!(
-                "Current world: {}, In combat: {}",
-                map_context.id.clone(),
-                combat_manager.in_combat
-            );
+
+        if let Some(chests) = region.chests {
+            for chest in chests {
+                commands
+                    .spawn(SceneBundle {
+                        scene: asset_server.load("chest.glb#Scene0"),
+                        transform: Transform::from_xyz(
+                            chest.hex_coord.q as f32 * HORIZONTAL_SPACING + chest.hex_coord.r as f32 % 2.0 * HOR_OFFSET,
+                            1.0,
+                            // +2.3 is a rough correction value as the chest glb isn't properly centred at x=0, z=0
+                            chest.hex_coord.r as f32 * VERTICAL_SPACING + 2.3,
+                        )
+                        .with_scale(Vec3::splat(0.6)),
+                        ..default()
+                    })
+                    .insert(chest);
+            }
         }
     }
 }

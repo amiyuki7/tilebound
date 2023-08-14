@@ -79,9 +79,18 @@ impl Health {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Chest {
+    pub hex_coord: HexCoord,
+    /// (Item ID, Item Count)
+    pub contents: Vec<(usize, u32)>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Region {
     pub tiles: Vec<Tile>,
     pub enemies: Option<Vec<Enemy>>,
+    pub player_spawn_spot: HexCoord,
+    pub chests: Option<Vec<Chest>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -98,18 +107,24 @@ pub enum SubregionType {
 }
 
 fn main() {
+    // Overarching Hashmap that is going to be written to the .json file at the end
     let mut map: HashMap<String, Region> = HashMap::new();
 
+    // Within some region, describes describes whether any tile has its subregion
     let mut tile_subregion_ids: HashMap<(i32, i32), SubregionData> = HashMap::new();
+    // Assigns a region to the above data
     let mut region_subregion_ids: HashMap<String, Option<HashMap<(i32, i32), SubregionData>>> = HashMap::new();
-
+    // For each world, describes what tile the player spawns on
+    let mut region_spawn_position: HashMap<String, (i32, i32)> = HashMap::new();
+    // holds the combat data in (region id - enemies) pairs
     let mut enemy_locations: HashMap<String, Option<Vec<Enemy>>> = HashMap::new();
     let mut enemy_list: Vec<Enemy> = Vec::new();
-    enemy_list.push(Enemy::new(0, 1, 2, 1, 10.0, 10.0));
-    enemy_locations.insert("1".to_string(), None);
-    enemy_locations.insert("1.1".to_string(), Some(enemy_list));
-    enemy_locations.insert("1.2".to_string(), None);
 
+    // Chest data
+    let mut chest_locations: HashMap<String, Option<Vec<Chest>>> = HashMap::new();
+
+    // Example: Lets create the overworld ("1") with 2 subregions ("1.1", "1.2")
+    // To do this, we need to first need to define what tiles will house these subregions
     tile_subregion_ids.insert(
         (1, 1),
         SubregionData {
@@ -124,18 +139,50 @@ fn main() {
             subregion_type: SubregionType::Other,
         },
     );
+    // So now, we tell the generative code to create a region ("1")
+    // The region will have 2 tiles, located at the above coordinates, that will send the player to the subregion "1.1" and "1.2"
 
     region_subregion_ids.insert("1".to_string(), Some(tile_subregion_ids));
+    // Also we tell the code which position to spawn the player in when the region is loaded
+    region_spawn_position.insert("1".to_string(), (0, 0));
+    // Since it is the overworld, it will not have any enemies, so `enemy_locations` will be empty for "1"
+    enemy_locations.insert("1".to_string(), None);
+    // I want "1.1" to be a combat, so I add a basic enemy to the enemy list and then push that list to `enemy_locations`
+    enemy_list.push(Enemy::new(0, 1, 2, 1, 10.0, 10.0));
+    enemy_locations.insert("1.1".to_string(), Some(enemy_list));
+    // Give the player a spawn point in the region
+    region_spawn_position.insert("1.1".to_string(), (5, 5));
+    // I don't want "1.2" to be a combat, so `enemy_locations` will be empty for it also
+    enemy_locations.insert("1.2".to_string(), None);
+    // Give the player a spawn point in the region
+    region_spawn_position.insert("1.2".to_string(), (2, 3));
+    // To keep it simple, the subregions won't have their own subregions. However, it is possible to do so. Just keep in mind that all the Hashmaps that are String: Something will need to have data on that subregion
     region_subregion_ids.insert("1.1".to_string(), None);
     region_subregion_ids.insert("1.2".to_string(), None);
 
+    chest_locations.insert(
+        "1".to_string(),
+        Some(vec![Chest {
+            hex_coord: HexCoord::new(4, 2),
+            contents: vec![(0, 10), (1, 4), (2, 1)],
+        }]),
+    );
+    chest_locations.insert("1.1".to_string(), None);
+    chest_locations.insert("1.2".to_string(), None);
+
+    // Generates a world based on data provided in hashmaps
     for (key, value) in region_subregion_ids.iter() {
         let mut tile_vec: Vec<Tile> = Vec::new();
         let mut enemy_vec: Vec<Enemy> = Vec::new();
+        let mut chest_vec: Vec<Chest> = Vec::new();
 
-        for q in 0..3 {
-            for r in 0..3 {
-                let mut current_tile = Tile::new(q, r, false, None);
+        for q in -1..=6 {
+            for r in -1..=6 {
+                let mut obstructed = false;
+                if q == -1 || q == 6 || r == -1 || r == 6 {
+                    obstructed = true
+                }
+                let mut current_tile = Tile::new(q, r, obstructed, None);
                 if let Some(subregions) = value {
                     for (coord, id) in subregions {
                         if (q, r) == *coord {
@@ -157,9 +204,22 @@ fn main() {
         if enemy_vec.len() > 0 {
             enemies = Some(enemy_vec.clone())
         }
+
+        if let Some(chests) = &chest_locations[key] {
+            for chest in chests {
+                chest_vec.push(chest.clone());
+            }
+        }
+        let mut chests: Option<Vec<Chest>> = None;
+        if !chest_vec.is_empty() {
+            chests = Some(chest_vec.clone());
+        }
+
         let current_region = Region {
             tiles: tile_vec,
             enemies,
+            player_spawn_spot: HexCoord::new_from_tupple(*region_spawn_position.get(key).clone().unwrap()),
+            chests,
         };
 
         map.insert(key.clone(), current_region);

@@ -4,6 +4,7 @@ use crate::*;
 
 use std::collections::hash_map::DefaultHasher;
 use std::f32::consts::PI;
+use std::fs;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
@@ -18,10 +19,7 @@ impl Plugin for AnimEnginePlugin {
             .add_event::<SpawnEntityEvent>()
             .add_plugin(PanOrbitCameraPlugin)
             .add_system(spawn_rigged_entity.in_set(OnUpdate(GameState::VisibleLoading)))
-            .add_systems((background_animation, key_animation_mock).in_set(OnUpdate(GameState::VisibleLoading)))
-            .add_systems(
-                (spawn_rigged_entity, background_animation, key_animation_mock).in_set(OnUpdate(GameState::InGame)),
-            );
+            .add_systems((spawn_rigged_entity, background_animation).in_set(OnUpdate(GameState::InGame)));
     }
 }
 
@@ -74,7 +72,7 @@ pub fn spawn_rigged_entity(
 ) {
     for event in spawn_entity_event.iter() {
         let is_player = event.is_player;
-        let mut hasher = DefaultHasher::new();
+        let mut hasher: DefaultHasher = DefaultHasher::new();
 
         let spawned_entity = match event.entity_type {
             REntityType::Kraug => {
@@ -85,7 +83,9 @@ pub fn spawn_rigged_entity(
                     .spawn(HookedSceneBundle {
                         scene: SceneBundle {
                             scene: re_map.0.get(&REntityType::Kraug).unwrap().scene.clone_weak(),
-                            transform: Transform::from_xyz(0.0, 1.0, 0.0),
+                            transform: Transform::from_xyz(0.0, 1.0, 0.0)
+                                // π/6 is "Forwards". All other directions are +/- multiples of π/3
+                                .with_rotation(Quat::from_rotation_y(PI / 2.0)),
                             ..default()
                         },
                         hook: SceneHook::new(move |entity, commands| {
@@ -120,14 +120,10 @@ pub fn spawn_rigged_entity(
             let camera = commands
                 .spawn((
                     Camera3dBundle {
-                        // transform: Transform::from_xyz(0.0, 5.0, -8.0)
                         transform: Transform::from_xyz(0.0, 25.0, -20.0)
                             // Increase x rotation a bit -> more "birds eye"
                             // Decrease x rotation a bit -> more "look at the sky"
-                            .with_rotation(
-                                /*Quat::from_rotation_x(PI * 13.0 / 12.0)*/
-                                Quat::from_rotation_x(4.0) * Quat::from_rotation_z(PI),
-                            ),
+                            .with_rotation(Quat::from_rotation_x(4.0) * Quat::from_rotation_z(PI)),
                         ..default()
                     },
                     PanOrbitCamera {
@@ -143,10 +139,33 @@ pub fn spawn_rigged_entity(
                 .insert(PlayerCameraMarker)
                 .id();
 
-            commands
-                .entity(spawned_entity)
-                .insert(Player::new(0, 0))
-                .add_child(camera);
+            // load in player data
+            let player_data = fs::read_to_string("player_data.json")
+                .expect("this error shouldn't happen, failed reading player_data.json");
+            let deserialized_result: Result<Player, _> = serde_json::from_str(&player_data);
+            let mut deserialised: Player;
+            if let Ok(deserial) = deserialized_result {
+                deserialised = deserial
+            } else {
+                let default_data = fs::read_to_string("default_player_data.json")
+                    .expect("this error shouldn't occur. Failed reading default_player_data.json");
+                deserialised = serde_json::from_str(&default_data).unwrap();
+                fs::write("player_data.json", default_data)
+                    .expect("It is very difficult for this error to occur. Stop messing with the code");
+            }
+            debug!("Here");
+            commands.entity(spawned_entity).insert(Player::new(
+                deserialised.respawn_point.coord.q,
+                deserialised.respawn_point.coord.r,
+                re_map.0.get(&event.entity_type).unwrap().animations[9].duration,
+                deserialised.stats.to_tupple(),
+            ));
+            commands.entity(spawned_entity).insert(Transform::from_xyz(
+                deserialised.hex_coord.q as f32 * HORIZONTAL_SPACING
+                    + deserialised.hex_coord.r as f32 % 2.0 * HOR_OFFSET,
+                1.0,
+                deserialised.hex_coord.r as f32 * VERTICAL_SPACING,
+            ));
         }
     }
 }
@@ -189,24 +208,34 @@ pub fn background_animation(
             let anim_elapsed = anim_player.elapsed();
             // trace!("Elapsed {} / {}", anim_elapsed, target_anim.duration);
 
-            // Linear blend all but index 8 and 9 (move/run)
-            // Move [8] or Run [9] should be "looping" (re-pending itself) unless explicitly overriden
-            if anim_player.elapsed() > target_anim.duration {
-                // Move animation
-                if target_anim.handle == re_map.0.get(re_type).unwrap().animations[8].handle {
-                    rentity.pend(8);
-                    return;
-                }
-
-                if target_anim.handle == re_map.0.get(re_type).unwrap().animations[9].handle {
-                    rentity.pend(9);
-                    return;
-                }
-            }
-
+            // // Linear blend all but index 8 and 9 (move/run)
+            // // Move [8] or Run [9] should be "looping" (re-pending itself) unless explicitly overriden
+            // if anim_player.elapsed() > target_anim.duration {
+            //     // Move animation
+            //     if target_anim.handle == re_map.0.get(re_type).unwrap().animations[8].handle {
+            //         rentity.pend(8);
+            //         return;
+            //     }
+            //
+            //     if target_anim.handle == re_map.0.get(re_type).unwrap().animations[9].handle {
+            //         rentity.pend(9);
+            //         return;
+            //     }
+            // }
+            //
             if anim_player.elapsed() > target_anim.duration - 0.5
                 && target_anim.handle != re_map.0.get(re_type).unwrap().animations[8].handle
                 && target_anim.handle != re_map.0.get(re_type).unwrap().animations[9].handle
+            {
+                match rentity.idle_state {
+                    IdleState::Unarmed => rentity.pend(3),
+                    IdleState::Armed => rentity.pend(2),
+                }
+            }
+
+            if anim_player.elapsed() > target_anim.duration
+                && (target_anim.handle == re_map.0.get(re_type).unwrap().animations[8].handle
+                    || target_anim.handle == re_map.0.get(re_type).unwrap().animations[9].handle)
             {
                 match rentity.idle_state {
                     IdleState::Unarmed => rentity.pend(3),

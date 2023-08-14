@@ -36,6 +36,10 @@ pub struct LoadingPlugin;
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<GameState>()
+            .add_state::<GIState>()
+            .add_event::<GlobalInteractionLockEvent>()
+            .register_type::<Player>()
+            .add_system(change_gi_state)
             .init_resource::<LoadingAssets>()
             .insert_resource(ClearColor(Color::RED))
             .add_startup_system(asset_loading)

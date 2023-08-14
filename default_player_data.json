@@ -1,0 +1,25 @@
+{
+    "hex_coord": {
+        "q": 0,
+        "r": 0
+    },
+    "path": null,
+    "health": {
+        "max_hp": 100.0,
+        "hp": 100.0
+    },
+    "respawn_point": {
+        "world": "1",
+        "coord": {
+            "q": 0,
+            "r": 0
+        }
+    },
+    "stats": {
+        "speed": 3,
+        "damage": 3,
+        "health": 4
+    },
+    "remaining_speed": 3,
+    "energy": 0
+}

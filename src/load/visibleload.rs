@@ -8,15 +8,18 @@ pub fn setup_scene(
     mut spawn_entity_event: EventWriter<SpawnEntityEvent>,
 ) {
     commands.insert_resource(ClearColor(Color::ALICE_BLUE));
-    // Floor
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(shape::Plane::from_size(50.0).into()),
-            material: materials.add(Color::LIME_GREEN.into()),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            ..default()
-        })
-        .insert(Name::new("Floor"));
+    commands.insert_resource(Inventory::default());
+
+    // Lighting to brighten everything up
+    commands.insert_resource(AmbientLight {
+        color: Color::Rgba {
+            red: 1.0,
+            green: 1.0,
+            blue: 1.0,
+            alpha: 1.0,
+        },
+        brightness: 0.6,
+    });
 
     spawn_entity_event.send(SpawnEntityEvent {
         entity_type: REntityType::Kraug,
@@ -24,4 +27,15 @@ pub fn setup_scene(
     });
 }
 
-pub fn scene_is_setup(mut commands: Commands) {}
+pub fn scene_is_setup(
+    player_query: Query<&Player>,
+    camera_query: Query<&PlayerCameraMarker>,
+    mut next_game_state: ResMut<NextState<GameState>>,
+) {
+    let player = player_query.get_single();
+    let camera = camera_query.get_single();
+
+    if player.is_ok() && camera.is_ok() {
+        next_game_state.set(GameState::InGame);
+    }
+}
