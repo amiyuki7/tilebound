@@ -151,7 +151,6 @@ pub fn combat_system(
             }
             _ => {}
         }
-    } else {
     }
     // Execute action
     'outer: for (_, mut tile) in &mut tiles {
@@ -236,7 +235,7 @@ pub fn combat_system(
 
 pub fn button_reset_system(
     mut combat_manager: ResMut<CombatManager>,
-    mut buttons: Query<(&mut BackgroundColor, Option<&mut ToggleButton>), With<ToggleButton>>,
+    mut buttons: Query<(&mut BackgroundColor, Option<&mut ToggleButton>), With<Button>>,
 ) {
     if combat_manager.reset_buttons == true {
         combat_manager.reset_buttons = false;
@@ -434,7 +433,7 @@ pub fn enemy_ai(
     let mut player = player.unwrap();
 
     if combat_manager.turn == Turn::Enemies {
-        // combat_manager.turn = Turn::Player;
+        combat_manager.reset_buttons = true;
         if !enemies.is_empty() {
             let mut obstructed_tiles: Vec<HexCoord> = tiles
                 .iter()
