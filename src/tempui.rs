@@ -121,6 +121,10 @@ fn play_button_interaction(
                     let default_player =
                         fs::read_to_string("default_player_data.json").expect("Something went wrong reading the file");
                     fs::write("player_data.json", default_player).expect("Unable to write to file");
+
+                    let default_inventory =
+                        fs::read_to_string("default_inventory.json").expect("Something went wrong reading the file");
+                    fs::write("inventory.json", default_inventory).expect("Unable to write to file");
                     next_game_state.set(GameState::CharacterCreation);
                 }
                 MainMenuButton::Load => {

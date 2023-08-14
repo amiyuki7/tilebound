@@ -1,3 +1,6 @@
+use std::fs::{self, OpenOptions};
+use std::io::{Read, Write};
+
 use bevy::window::PrimaryWindow;
 
 use crate::*;
@@ -15,10 +18,18 @@ impl Plugin for InventoryPlugin {
                     .in_set(OnUpdate(GameState::InGame)),
             )
             .add_system(undraw_inventory.in_schedule(OnExit(UIState::Inventory)))
-            .add_systems((item_button_interaction, increment_button_interaction).in_set(OnUpdate(UIState::Inventory)));
+            .add_systems(
+                (
+                    item_button_interaction,
+                    increment_button_interaction,
+                    use_button_interaction,
+                )
+                    .in_set(OnUpdate(UIState::Inventory)),
+            );
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct ItemStack {
     pub item_id: usize,
     pub item_name: String,
@@ -58,16 +69,19 @@ impl ItemStack {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Serialize, Deserialize)]
 pub struct Inventory {
     slots: Vec<Option<ItemStack>>,
 }
 
 impl Default for Inventory {
     fn default() -> Self {
-        Self {
-            slots: (1..=30).map(|_| None).collect(),
-        }
+        let inventory_data = fs::read_to_string("inventory.json").expect("Something went wrong reading the file");
+        serde_json::from_str(&inventory_data).unwrap()
+
+        // Self {
+        //     slots: (1..=30).map(|_| None).collect(),
+        // }
     }
 }
 
@@ -112,6 +126,11 @@ impl Inventory {
 
         // TODO: Don't purge remaining items...instead convert them into player XP
         dbg!("Remaining items to be purged: {}", qty);
+
+        // Saving code
+        let inventory_data = serde_json::to_string(&*self).unwrap();
+        fs::write("inventory.json", inventory_data)
+            .expect("It is very difficult for this error to occur. Stop messing with the code");
     }
 }
 
@@ -154,6 +173,11 @@ struct InventoryItemButton {
 }
 
 #[derive(Component)]
+struct ItemButtonIcon {
+    slot_idx: usize,
+}
+
+#[derive(Component)]
 struct ItemStatsName;
 
 #[derive(Component)]
@@ -173,10 +197,10 @@ struct IncrementButton(i8);
 #[derive(Component)]
 struct UseButton;
 
-// #[derive(Component)]
-// struct MiniQuantityText {
-//     item_type: Option<ItemType>,
-// }
+#[derive(Component)]
+struct QuantityText {
+    slot_idx: usize,
+}
 
 fn draw_inventory(
     mut commands: Commands,
@@ -334,35 +358,37 @@ fn draw_inventory(
                                             })
                                             .with_children(|commands| {
                                                 // Item icon
-                                                commands.spawn(ImageBundle {
-                                                    style: Style {
-                                                        size: Size::new(
-                                                            Val::Px(inventory_width / 17.5),
-                                                            Val::Px(inventory_width / 17.5),
-                                                        ),
-                                                        ..default()
-                                                    },
-                                                    image: UiImage {
-                                                        texture: {
-                                                            if let Some(ref item_stack) = inventory.slots[i] {
-                                                                match item_stack.item_id {
-                                                                    0 => asset_server.load("items/xpdrop.png"),
-                                                                    1 => asset_server.load("items/xpgem.png"),
-                                                                    2 => asset_server.load("items/xpcore.png"),
-                                                                    3 => asset_server.load("items/hpotS.png"),
-                                                                    4 => asset_server.load("items/hpotM.png"),
-                                                                    _ => unreachable!(),
-                                                                }
-                                                            } else {
-                                                                asset_server.load("items/empty.png")
-                                                            }
+                                                commands
+                                                    .spawn(ImageBundle {
+                                                        style: Style {
+                                                            size: Size::new(
+                                                                Val::Px(inventory_width / 17.5),
+                                                                Val::Px(inventory_width / 17.5),
+                                                            ),
+                                                            ..default()
                                                         },
-                                                        flip_x: false,
-                                                        flip_y: false,
-                                                    },
-                                                    transform: Transform::from_scale(Vec3::splat(0.7)),
-                                                    ..default()
-                                                });
+                                                        image: UiImage {
+                                                            texture: {
+                                                                if let Some(ref item_stack) = inventory.slots[i] {
+                                                                    match item_stack.item_id {
+                                                                        0 => asset_server.load("items/xpdrop.png"),
+                                                                        1 => asset_server.load("items/xpgem.png"),
+                                                                        2 => asset_server.load("items/xpcore.png"),
+                                                                        3 => asset_server.load("items/hpotS.png"),
+                                                                        4 => asset_server.load("items/hpotM.png"),
+                                                                        _ => unreachable!(),
+                                                                    }
+                                                                } else {
+                                                                    asset_server.load("items/empty.png")
+                                                                }
+                                                            },
+                                                            flip_x: false,
+                                                            flip_y: false,
+                                                        },
+                                                        transform: Transform::from_scale(Vec3::splat(0.7)),
+                                                        ..default()
+                                                    })
+                                                    .insert(ItemButtonIcon { slot_idx: i });
                                                 // Quantity text
                                                 commands
                                                     .spawn(TextBundle {
@@ -391,6 +417,7 @@ fn draw_inventory(
                                                         ),
                                                         ..default()
                                                     })
+                                                    .insert(QuantityText { slot_idx: i })
                                                     .insert(Name::new("Quantity text"));
                                             });
                                     }
@@ -692,6 +719,7 @@ fn spawn_quantity_increment_button(
         });
 }
 
+#[allow(clippy::complexity)]
 fn increment_button_interaction(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor, &IncrementButton),
@@ -745,4 +773,94 @@ fn increment_button_interaction(
             _ => *background_colour = Color::rgb(0.13, 0.14, 0.26).into(),
         }
     }
+}
+
+#[allow(clippy::complexity)]
+fn use_button_interaction(
+    mut interaction_query: Query<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<UseButton>)>,
+    mut inventory: ResMut<Inventory>,
+    mut item_buttons: Query<&mut InventoryItemButton>,
+    mut select_qty: Query<&mut ItemStatsSelectQuantity>,
+    mut texts: ParamSet<(
+        Query<&mut Text, With<ItemStatsSelectQuantity>>,
+        Query<&mut Text, With<ItemStatsName>>,
+        Query<&mut Text, With<ItemStatsDescription>>,
+        Query<(&mut Text, &QuantityText)>,
+    )>,
+    mut images: ParamSet<(
+        Query<(&mut UiImage, &ItemButtonIcon)>,
+        Query<&mut UiImage, With<ItemStatsImage>>,
+    )>,
+    asset_server: Res<AssetServer>,
+) {
+    let target_slot_idx = item_buttons
+        .iter()
+        .find(|button| button.is_selected)
+        .map(|button| button.slot_idx);
+
+    if target_slot_idx.is_none() {
+        return;
+    }
+
+    for (interaction, mut background_colour) in interaction_query.iter_mut() {
+        match interaction {
+            Interaction::Clicked => {
+                let amount = select_qty.get_single().unwrap().quantity;
+                let target_slot_idx = target_slot_idx.unwrap();
+                // Safe to unwrap - guaranteed that a selected slot exists inside the inventory slots
+                if inventory.slots[target_slot_idx].as_ref().unwrap().quantity - amount > 0 {
+                    // Didn't use the entire stack
+                    inventory.slots[target_slot_idx].as_mut().unwrap().quantity -= amount;
+
+                    // !TODO: Apply appropriate effects upon removing items from inventory
+                    // (currently does nothing apart from remove)
+
+                    // Update qty text to new value
+                    for (mut qty_text, qty_text_comp) in texts.p3().iter_mut() {
+                        if qty_text_comp.slot_idx == target_slot_idx {
+                            qty_text.sections[0].value =
+                                inventory.slots[target_slot_idx].as_ref().unwrap().quantity.to_string();
+                        }
+                    }
+
+                    // Reset the select qty
+                    select_qty.get_single_mut().unwrap().quantity = 1;
+                    texts.p0().get_single_mut().unwrap().sections[0].value = "1".to_string();
+                } else {
+                    // Used the entire stack
+
+                    for (mut button_image, icon_comp) in images.p0().iter_mut() {
+                        if icon_comp.slot_idx == target_slot_idx {
+                            button_image.texture = asset_server.load("items/empty.png");
+                        }
+                    }
+                    images.p1().get_single_mut().unwrap().texture = asset_server.load("items/empty.png");
+
+                    for (mut qty_text, qty_text_comp) in texts.p3().iter_mut() {
+                        if qty_text_comp.slot_idx == target_slot_idx {
+                            qty_text.sections[0].value = "/".to_string();
+                        }
+                    }
+
+                    texts.p0().get_single_mut().unwrap().sections[0].value = "/".into();
+                    texts.p1().get_single_mut().unwrap().sections[0].value = "".into();
+                    texts.p2().get_single_mut().unwrap().sections[0].value = "\n".into();
+
+                    // Since the item has poofed out of the inventory, all item buttons should be un selected
+                    item_buttons
+                        .iter_mut()
+                        .for_each(|mut button| button.is_selected = false);
+
+                    inventory.slots[target_slot_idx] = None;
+                }
+            }
+            Interaction::Hovered => *background_colour = Color::rgb(0.34, 0.37, 0.60).into(),
+            _ => *background_colour = Color::rgb(0.22, 0.25, 0.48).into(),
+        }
+    }
+
+    // Saving code
+    let inventory_data = serde_json::to_string(inventory.as_ref()).unwrap();
+    fs::write("inventory.json", inventory_data)
+        .expect("It is very difficult for this error to occur. Stop messing with the code");
 }
