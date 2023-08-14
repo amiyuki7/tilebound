@@ -1,3 +1,6 @@
+use std::fs::{self, OpenOptions};
+use std::io::{Read, Write};
+
 use bevy::window::PrimaryWindow;
 
 use crate::*;
@@ -26,6 +29,7 @@ impl Plugin for InventoryPlugin {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct ItemStack {
     pub item_id: usize,
     pub item_name: String,
@@ -65,16 +69,19 @@ impl ItemStack {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Serialize, Deserialize)]
 pub struct Inventory {
     slots: Vec<Option<ItemStack>>,
 }
 
 impl Default for Inventory {
     fn default() -> Self {
-        Self {
-            slots: (1..=30).map(|_| None).collect(),
-        }
+        let inventory_data = fs::read_to_string("inventory.json").expect("Something went wrong reading the file");
+        serde_json::from_str(&inventory_data).unwrap()
+
+        // Self {
+        //     slots: (1..=30).map(|_| None).collect(),
+        // }
     }
 }
 
@@ -119,6 +126,11 @@ impl Inventory {
 
         // TODO: Don't purge remaining items...instead convert them into player XP
         dbg!("Remaining items to be purged: {}", qty);
+
+        // Saving code
+        let inventory_data = serde_json::to_string(&*self).unwrap();
+        fs::write("inventory.json", inventory_data)
+            .expect("It is very difficult for this error to occur. Stop messing with the code");
     }
 }
 
@@ -846,4 +858,9 @@ fn use_button_interaction(
             _ => *background_colour = Color::rgb(0.22, 0.25, 0.48).into(),
         }
     }
+
+    // Saving code
+    let inventory_data = serde_json::to_string(inventory.as_ref()).unwrap();
+    fs::write("inventory.json", inventory_data)
+        .expect("It is very difficult for this error to occur. Stop messing with the code");
 }
