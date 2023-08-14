@@ -132,6 +132,22 @@ pub fn combat_system(
                     }
                 }
             }
+            AcitonType::RunSmack => {
+                let possible_tiles = vec![
+                    HexCoord::new(player.hex_coord.q + 2, player.hex_coord.r),
+                    HexCoord::new(player.hex_coord.q - 2, player.hex_coord.r),
+                    HexCoord::new(player.hex_coord.q + 1, player.hex_coord.r + 2),
+                    HexCoord::new(player.hex_coord.q + 1, player.hex_coord.r - 2),
+                    HexCoord::new(player.hex_coord.q - 1, player.hex_coord.r + 2),
+                    HexCoord::new(player.hex_coord.q - 1, player.hex_coord.r - 2),
+                ];
+                for (tile_mat, tile) in &mut tiles {
+                    let mut raw_mat = materials.get_mut(tile_mat).unwrap();
+                    if !tile.is_obstructed && possible_tiles.contains(&tile.coord) {
+                        raw_mat.base_color = Color::LIME_GREEN;
+                    }
+                }
+            }
             _ => {}
         }
     } else {
@@ -141,8 +157,10 @@ pub fn combat_system(
         if tile.is_clicked {
             if let Some(player_action) = combat_manager.player_action {
                 tile.is_clicked = false;
+                let mut action_complete = false;
                 match player_action {
                     AcitonType::Fireball => {
+                        action_complete = true;
                         for (mut pos, spell) in &mut spells {
                             if *spell == Spell::Fireball {
                                 pos.translation.x =
@@ -157,22 +175,48 @@ pub fn combat_system(
                         }
                     }
                     AcitonType::Smack => {
+                        if !get_neighbors(&player.hex_coord).contains(&tile.coord) {
+                            continue 'outer;
+                        }
+                        action_complete = true;
                         for mut enemy in &mut enemies {
                             if enemy.hex_coord == tile.coord {
-                                combat_manager.reset_buttons = true;
                                 enemy.health.hp -= (player.stats.damage * 2) as f32
+                            }
+                        }
+                    }
+                    AcitonType::RunSmack => {
+                        if !vec![
+                            HexCoord::new(player.hex_coord.q + 2, player.hex_coord.r),
+                            HexCoord::new(player.hex_coord.q - 2, player.hex_coord.r),
+                            HexCoord::new(player.hex_coord.q + 1, player.hex_coord.r + 2),
+                            HexCoord::new(player.hex_coord.q + 1, player.hex_coord.r - 2),
+                            HexCoord::new(player.hex_coord.q - 1, player.hex_coord.r + 2),
+                            HexCoord::new(player.hex_coord.q - 1, player.hex_coord.r - 2),
+                        ]
+                        .contains(&tile.coord)
+                        {
+                            continue 'outer;
+                        }
+                        action_complete = true;
+                        for mut enemy in &mut enemies {
+                            if enemy.hex_coord == tile.coord {
+                                enemy.health.hp -= (player.stats.damage * 5) as f32
                             }
                         }
                     }
                     _ => {}
                 }
-                combat_manager.player_action = None;
-                if combat_manager.turn == Turn::Player(Phase::Action1) {
-                    combat_manager.turn = Turn::Player(Phase::Action2)
-                } else if combat_manager.turn == Turn::Player(Phase::Action2) {
-                    combat_manager.turn = Turn::Enemies;
-                    for mut enemy in &mut enemies {
-                        enemy.ended_turn = false;
+                if action_complete {
+                    combat_manager.reset_buttons = true;
+                    combat_manager.player_action = None;
+                    if combat_manager.turn == Turn::Player(Phase::Action1) {
+                        combat_manager.turn = Turn::Player(Phase::Action2)
+                    } else if combat_manager.turn == Turn::Player(Phase::Action2) {
+                        combat_manager.turn = Turn::Enemies;
+                        for mut enemy in &mut enemies {
+                            enemy.ended_turn = false;
+                        }
                     }
                 }
             }
@@ -282,6 +326,24 @@ pub fn combat_button_system(
                                             if toggle.is_on {
                                                 *color = PRESSED_BUTTON.into();
                                                 combat_manager.player_action = Some(AcitonType::Smack);
+                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
+                                            } else {
+                                                *color = HOVERED_BUTTON.into();
+                                                combat_manager.player_action = None;
+                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Locked))
+                                            }
+                                        }
+                                    }
+                                }
+                                AcitonType::RunSmack => {
+                                    if combat_manager.turn == Turn::Player(Phase::Action1)
+                                        || combat_manager.turn == Turn::Player(Phase::Action2)
+                                    {
+                                        if let Some(mut toggle) = toggle_state {
+                                            toggle.is_on = !toggle.is_on;
+                                            if toggle.is_on {
+                                                *color = PRESSED_BUTTON.into();
+                                                combat_manager.player_action = Some(AcitonType::RunSmack);
                                                 gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
                                             } else {
                                                 *color = HOVERED_BUTTON.into();
@@ -548,7 +610,7 @@ pub fn add_combat_stuff(
                         align_items: AlignItems::Center,
                         position_type: PositionType::Absolute,
                         position: UiRect {
-                            right: Val::Px(100.0),
+                            right: Val::Px(200.0),
                             top: Val::Px(0.0),
                             ..default()
                         },
@@ -573,6 +635,44 @@ pub fn add_combat_stuff(
                         .insert(ButtonText {
                             active_text: "Smacking".to_string(),
                             passive_text: "Smack".to_string(),
+                        });
+                });
+            let run_smack_icon = asset_server.load("2D/RunSmack.png");
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        size: Size::height(Val::Percent(100.0)),
+                        // horizontally center child text
+                        justify_content: JustifyContent::Center,
+                        // vertically center child text
+                        align_items: AlignItems::Center,
+                        position_type: PositionType::Absolute,
+                        position: UiRect {
+                            right: Val::Px(400.0),
+                            top: Val::Px(0.0),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    background_color: NORMAL_BUTTON.into(),
+                    image: UiImage::new(run_smack_icon),
+                    ..default()
+                })
+                .insert(ButtonType::CombatButton(CombatButtonType::Action(AcitonType::RunSmack)))
+                .insert(ToggleButton::new())
+                .with_children(|parent| {
+                    parent
+                        .spawn(TextBundle::from_section(
+                            "Run'n'Smack",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 40.0,
+                                color: Color::rgb(0.9, 0.9, 0.9),
+                            },
+                        ))
+                        .insert(ButtonText {
+                            active_text: "Running 'n' Smacking".to_string(),
+                            passive_text: "Run'n'Smack".to_string(),
                         });
                 });
             // parent
@@ -622,7 +722,7 @@ pub fn add_combat_stuff(
                         align_items: AlignItems::Center,
                         position_type: PositionType::Absolute,
                         position: UiRect {
-                            right: Val::Px(256.0),
+                            left: Val::Px(0.0),
                             top: Val::Px(0.0),
                             ..default()
                         },

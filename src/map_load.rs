@@ -175,7 +175,7 @@ pub fn update_world(
                         }
 
                         for (entity, mut tile) in &mut tiles {
-                            if entity == event.target {
+                            if entity == event.target && event.button == PointerButton::Primary {
                                 tile.is_clicked = true;
                             }
                         }

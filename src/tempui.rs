@@ -167,6 +167,7 @@ pub enum AcitonType {
     EndPhase,
     Fireball,
     Smack,
+    RunSmack,
 }
 
 #[derive(Component)]
