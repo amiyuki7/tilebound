@@ -63,6 +63,7 @@ pub struct Player {
     #[serde(default, skip)]
     pub move_timer: Timer,
     pub stats: Stats,
+    pub energy: i32,
 }
 
 impl Player {
@@ -94,6 +95,7 @@ impl Player {
                 damage: stats.1,
                 health: stats.2,
             },
+            energy: 0,
         }
     }
 

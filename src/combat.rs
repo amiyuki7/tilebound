@@ -93,10 +93,10 @@ pub fn combat_system(
     mut enemies: Query<&mut Enemy>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
-    player_query: Query<&Player>,
+    mut player_query: Query<&mut Player>,
 ) {
     // Response to player chosing action
-    let player = player_query.single();
+    let mut player = player_query.single_mut();
     'outer: for (tile_mat, tile) in &mut tiles {
         let mut raw_mat = materials.get_mut(tile_mat).unwrap();
         if player.path.is_none() {
@@ -262,10 +262,12 @@ pub fn combat_button_system(
     mut combat_manager: ResMut<CombatManager>,
     mut gi_lock_sender: EventWriter<GlobalInteractionLockEvent>,
     mut enemies: Query<&mut Enemy>,
+    mut player_query: Query<&mut Player>,
     // mut text_query: Query<&mut Text>,
     // other_text_queery: Query<&ButtonText>,
     // mut tile_queery: Query<&mut Tile>,
 ) {
+    let mut player = player_query.single_mut();
     for (interaction, mut color, _children, button_type, mut toggle_state) in &mut interaction_query {
         // let msg = format!("{:#?}", button_type);
         // trace!(msg);
@@ -281,6 +283,7 @@ pub fn combat_button_system(
                                     match phase {
                                         Phase::Movement => {
                                             combat_manager.turn = Turn::Player(Phase::Action1);
+                                            player.energy += player.remaining_speed;
                                             gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Locked));
                                             //
                                         }
@@ -303,16 +306,20 @@ pub fn combat_button_system(
                                     if combat_manager.turn == Turn::Player(Phase::Action1)
                                         || combat_manager.turn == Turn::Player(Phase::Action2)
                                     {
-                                        if let Some(mut toggle) = toggle_state {
-                                            toggle.is_on = !toggle.is_on;
-                                            if toggle.is_on {
-                                                *color = PRESSED_BUTTON.into();
-                                                combat_manager.player_action = Some(AcitonType::Fireball);
-                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked))
-                                            } else {
-                                                *color = HOVERED_BUTTON.into();
-                                                combat_manager.player_action = None;
-                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Locked))
+                                        if player.energy >= 2 {
+                                            if let Some(mut toggle) = toggle_state {
+                                                toggle.is_on = !toggle.is_on;
+                                                if toggle.is_on {
+                                                    *color = PRESSED_BUTTON.into();
+                                                    combat_manager.player_action = Some(AcitonType::Fireball);
+                                                    player.energy -= 2;
+                                                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked))
+                                                } else {
+                                                    *color = HOVERED_BUTTON.into();
+                                                    combat_manager.player_action = None;
+                                                    player.energy += 2;
+                                                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Locked))
+                                                }
                                             }
                                         }
                                     }
@@ -339,16 +346,20 @@ pub fn combat_button_system(
                                     if combat_manager.turn == Turn::Player(Phase::Action1)
                                         || combat_manager.turn == Turn::Player(Phase::Action2)
                                     {
-                                        if let Some(mut toggle) = toggle_state {
-                                            toggle.is_on = !toggle.is_on;
-                                            if toggle.is_on {
-                                                *color = PRESSED_BUTTON.into();
-                                                combat_manager.player_action = Some(AcitonType::RunSmack);
-                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
-                                            } else {
-                                                *color = HOVERED_BUTTON.into();
-                                                combat_manager.player_action = None;
-                                                gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Locked))
+                                        if player.energy >= 1 {
+                                            if let Some(mut toggle) = toggle_state {
+                                                toggle.is_on = !toggle.is_on;
+                                                if toggle.is_on {
+                                                    *color = PRESSED_BUTTON.into();
+                                                    combat_manager.player_action = Some(AcitonType::RunSmack);
+                                                    player.energy -= 1;
+                                                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Unlocked));
+                                                } else {
+                                                    *color = HOVERED_BUTTON.into();
+                                                    combat_manager.player_action = None;
+                                                    player.energy += 1;
+                                                    gi_lock_sender.send(GlobalInteractionLockEvent(GIState::Locked))
+                                                }
                                             }
                                         }
                                     }

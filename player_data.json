@@ -1,1 +1,1 @@
-{"hex_coord":{"q":0,"r":0},"path":null,"health":{"max_hp":100.0,"hp":100.0},"respawn_point":{"world":"1","coord":{"q":0,"r":0}},"remaining_speed":3,"stats":{"speed":3,"damage":1,"health":1}}
+{"hex_coord":{"q":0,"r":0},"path":null,"health":{"max_hp":100.0,"hp":100.0},"respawn_point":{"world":"1","coord":{"q":0,"r":0}},"remaining_speed":3,"stats":{"speed":8,"damage":1,"health":1},"energy":0}

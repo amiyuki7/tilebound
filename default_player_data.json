@@ -20,5 +20,6 @@
         "damage": 3,
         "health": 4
     },
-    "remaining_speed": 3
+    "remaining_speed": 3,
+    "energy": 0
 }
