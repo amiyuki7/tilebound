@@ -168,9 +168,10 @@ pub fn update_world(
                 OnPointer::<Click>::run_callback(
                     |In(event): In<ListenedEvent<Click>>,
                      mut tiles: Query<(Entity, &mut Tile)>,
-                     gi_state: Res<State<GIState>>| {
-                        // Clicking should only be allowed during GIState::Unlocked
-                        if gi_state.0 == GIState::Locked {
+                     gi_state: Res<State<GIState>>,
+                     ui_state: Res<State<UIState>>| {
+                        // Clicking should only be allowed during GIState::Unlocked and during UIState::Inventory
+                        if gi_state.0 == GIState::Locked || ui_state.0 == UIState::Inventory {
                             return Bubble::Up;
                         }
 
