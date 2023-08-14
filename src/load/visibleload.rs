@@ -8,6 +8,7 @@ pub fn setup_scene(
     mut spawn_entity_event: EventWriter<SpawnEntityEvent>,
 ) {
     commands.insert_resource(ClearColor(Color::ALICE_BLUE));
+    commands.insert_resource(Inventory::default());
 
     // Lighting to brighten everything up
     commands.insert_resource(AmbientLight {
