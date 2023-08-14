@@ -13,6 +13,7 @@ impl Plugin for CombatPlugin {
                     update_enemy_health,
                     update_player_health,
                     button_reset_system,
+                    update_combat_information,
                 )
                     .distributive_run_if(resource_exists::<CombatManager>()),
             )
@@ -536,6 +537,32 @@ pub fn remove_combat_stuff(mut commands: Commands, ui_stuff: Query<Entity, With<
     }
 }
 
+#[derive(Component)]
+pub enum InformationField {
+    CurrentTurn,
+    RemainingMovement,
+    Energy,
+}
+
+pub fn update_combat_information(
+    mut fields: Query<(&mut Text, &InformationField)>,
+    combat_manager: Res<CombatManager>,
+    player_query: Query<&Player>,
+) {
+    let player = player_query.single();
+    for (mut field, field_type) in &mut fields {
+        match field_type {
+            InformationField::CurrentTurn => {
+                field.sections[0].value = format!("Current Turn: {:?}", combat_manager.turn)
+            }
+            InformationField::RemainingMovement => {
+                field.sections[0].value = format!("Remaining movement: {:?}", player.remaining_speed)
+            }
+            InformationField::Energy => field.sections[0].value = format!("Energy: {:?}", player.energy),
+        }
+    }
+}
+
 pub fn add_combat_stuff(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -765,7 +792,8 @@ pub fn add_combat_stuff(
                 size: Size::new(Val::Px(200.0), Val::Px(50.0)),
                 border: UiRect::all(Val::Px(2.0)),
                 position_type: PositionType::Absolute,
-                // position: UiRect::new(Val::Px(0.0), Val::Px(200.0), Val::Px(0.0), Val::Px(100.0)),
+                flex_direction: FlexDirection::Row,
+                position: UiRect::new(Val::Px(0.0), Val::Px(200.0), Val::Px(0.0), Val::Px(100.0)),
                 ..Default::default()
             },
             background_color: Color::GRAY.into(),
@@ -783,5 +811,59 @@ pub fn add_combat_stuff(
                     ..Default::default()
                 })
                 .insert(HealthBar);
+        });
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                size: Size::new(Val::Px(200.0), Val::Px(50.0)),
+                border: UiRect::all(Val::Px(2.0)),
+                position_type: PositionType::Absolute,
+                flex_direction: FlexDirection::Column,
+                position: UiRect::new(Val::Px(200.0), Val::Percent(100.0), Val::Px(0.0), Val::Px(100.0)),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .insert(CombatObject)
+        .with_children(|parent| {
+            parent
+                .spawn(TextBundle {
+                    text: Text::from_section(
+                        format!("Current Turn: "),
+                        TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 40.0,
+                            color: Color::BLACK,
+                        },
+                    ),
+                    ..Default::default()
+                })
+                .insert(InformationField::CurrentTurn);
+            parent
+                .spawn(TextBundle {
+                    text: Text::from_section(
+                        format!("Remaining Movement: "),
+                        TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 40.0,
+                            color: Color::BLACK,
+                        },
+                    ),
+                    ..Default::default()
+                })
+                .insert(InformationField::RemainingMovement);
+            parent
+                .spawn(TextBundle {
+                    text: Text::from_section(
+                        format!("Your Energy: "),
+                        TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 40.0,
+                            color: Color::BLACK,
+                        },
+                    ),
+                    ..Default::default()
+                })
+                .insert(InformationField::Energy);
         });
 }
